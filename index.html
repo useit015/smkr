@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js FBX Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <div class="start-content">
+            <h1 class="game-title">SMOKER</h1>
+            <p class="game-subtitle">A 3D Adventure</p>
+            
+            <div class="character-selection">
+                <h3>CHOOSE YOUR PLAYER</h3>
+                <div class="characters-grid-small">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <div class="start-buttons">
+                <button id="start-game-btn" class="btn btn-primary">
+                    <span>Start Game</span>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                </button>
+                <button id="settings-btn" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel" class="hidden">
+        <div class="settings-container">
+            <div class="settings-header">
+                <h2>Settings</h2>
+                <button id="close-settings" class="btn-close">&times;</button>
+            </div>
+            <div class="settings-tabs">
+                <button class="tab-btn active" data-tab="controls">Controls</button>
+                <button class="tab-btn" data-tab="graphics">Graphics</button>
+                <button class="tab-btn" data-tab="audio">Audio</button>
+            </div>
+            <div class="settings-content">
+                <!-- Controls Tab -->
+                <div id="tab-controls" class="tab-content active">
+                    <div class="setting-group">
+                        <h3>Movement</h3>
+                        <div class="key-bindings">
+                            <div class="key-binding"><span>Move Forward</span><kbd>↑</kbd></div>
+                            <div class="key-binding"><span>Move Backward</span><kbd>↓</kbd></div>
+                            <div class="key-binding"><span>Move Left</span><kbd>←</kbd></div>
+                            <div class="key-binding"><span>Move Right</span><kbd>→</kbd></div>
+                            <div class="key-binding"><span>Run</span><kbd>Shift</kbd></div>
+                            <div class="key-binding"><span>Jump</span><kbd>Space</kbd></div>
+                        </div>
+                    </div>
+                    <div class="setting-group">
+                        <label class="setting-row">
+                            <span>Mouse Sensitivity</span>
+                            <input type="range" id="mouse-sensitivity" min="1" max="10" value="5">
+                            <span class="range-value" id="sensitivity-value">5</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- Graphics Tab -->
+                <div id="tab-graphics" class="tab-content">
+                    <div class="setting-group">
+                        <label class="setting-row">
+                            <span>Shadow Quality</span>
+                            <select id="shadow-quality">
+                                <option value="off">Off</option>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </label>
+                        <label class="setting-row">
+                            <span>Render Distance</span>
+                            <input type="range" id="render-distance" min="50" max="500" value="200" step="50">
+                            <span class="range-value" id="distance-value">200</span>
+                        </label>
+                        <label class="setting-row">
+                            <span>Anti-Aliasing</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="antialiasing" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <!-- Audio Tab -->
+                <div id="tab-audio" class="tab-content">
+                    <div class="setting-group">
+                        <label class="setting-row">
+                            <span>Master Volume</span>
+                            <input type="range" id="master-volume" min="0" max="100" value="80">
+                            <span class="range-value" id="master-value">80%</span>
+                        </label>
+                        <label class="setting-row">
+                            <span>SFX Volume</span>
+                            <input type="range" id="sfx-volume" min="0" max="100" value="100">
+                            <span class="range-value" id="sfx-value">100%</span>
+                        </label>
+                        <label class="setting-row">
+                            <span>Music Volume</span>
+                            <input type="range" id="music-volume" min="0" max="100" value="70">
+                            <span class="range-value" id="music-value">70%</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="settings-footer">
+                <button id="reset-settings" class="btn btn-text">Reset to Default</button>
+                <button id="save-settings" class="btn btn-primary">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-screen">
+        <div class="loader-content">
+            <h1>LOADING</h1>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <p id="loading-text">Preparing assets...</p>
+        </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Game HUD -->
+    <div id="game-ui">
+        <div id="camera-controls" class="camera-controls">
+            <button class="camera-btn" data-preset="close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>Close</span>
+            </button>
+            <button class="camera-btn active" data-preset="medium">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                <span>Medium</span>
+            </button>
+            <button class="camera-btn" data-preset="far">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                    <path d="M12 8l4 4-4 4M8 12h8"></path>
+                </svg>
+                <span>Far</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pause-screen" class="hidden">
+        <div class="pause-content">
+            <h2 class="pause-title">PAUSED</h2>
+            <div class="pause-buttons">
+                <button id="resume-btn" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    <span>Resume</span>
+                </button>
+                <button id="change-character-btn" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Change Character</span>
+                </button>
+                <button id="pause-settings-btn" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Settings</span>
+                </button>
+            </div>
+            <p class="pause-hint">Press <kbd>ESC</kbd> to resume</p>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script>
+</body>
+</html>
