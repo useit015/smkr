@@ -1,7 +1,15 @@
 import * as THREE from 'three';
 import { CONFIG } from '../Config';
 
+/**
+ * Handles character movement, rotation, and jumping physics.
+ */
 export class CharacterController {
+	/**
+	 * @param {THREE.Object3D} model - The character model to control.
+	 * @param {InputManager} inputManager - The input manager for movement data.
+	 * @param {THREE.Camera} camera - The camera used to determine movement direction.
+	 */
 	constructor (model, inputManager, camera) {
 		this.model = model;
 		this.input = inputManager;
@@ -13,6 +21,10 @@ export class CharacterController {
 		this.groundY = 0;
 	}
 
+	/**
+	 * Initiates a jump if the character is not already jumping.
+	 * @returns {boolean} True if the jump was started, false otherwise.
+	 */
 	startJump () {
 		if (this.isJumping) return false;
 
@@ -22,11 +34,20 @@ export class CharacterController {
 		return true;
 	}
 
+	/**
+	 * Updates character physics and movement.
+	 * @param {number} dt - Delta time in seconds.
+	 */
 	update (dt) {
 		this._updateJumpPhysics(dt);
 		this._updateMovement(dt);
 	}
 
+	/**
+	 * Updates the vertical position of the character during a jump.
+	 * @param {number} dt - Delta time in seconds.
+	 * @private
+	 */
 	_updateJumpPhysics (dt) {
 		if (!this.isJumping) return;
 
@@ -41,6 +62,11 @@ export class CharacterController {
 		}
 	}
 
+	/**
+	 * Updates character horizontal movement and rotation based on inputs.
+	 * @param {number} dt - Delta time in seconds.
+	 * @private
+	 */
 	_updateMovement (dt) {
 		const moveDir = this.input.getMovementDirection(this.camera);
 		if (!moveDir) return;
@@ -62,6 +88,11 @@ export class CharacterController {
 		this.model.position.add(moveDir.clone().multiplyScalar(speed * dt));
 	}
 
+	/**
+	 * Calculates the current movement speed based on input state.
+	 * @returns {number} The current speed.
+	 * @private
+	 */
 	_getCurrentSpeed () {
 		if (!this.input.isMoving) return 0;
 

@@ -18,6 +18,11 @@ function createCharacter (id) {
 	};
 }
 
+/**
+ * Global game configuration object.
+ * Contains settings for scene, camera, controls, lighting, character physics, and assets.
+ * @type {Object}
+ */
 export const CONFIG = {
 	// Scene
 	scene: {

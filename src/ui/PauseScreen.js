@@ -1,7 +1,13 @@
 /**
- * PauseScreen - Manages the pause screen UI
+ * Manages the pause screen UI and its interactions.
  */
 export class PauseScreen {
+	/**
+	 * @param {Function} onResume - Callback when the game is resumed.
+	 * @param {Function} onSettingsChange - Callback when settings are changed.
+	 * @param {Function} onOpenSettings - Callback to open the settings panel.
+	 * @param {Function} onChangeCharacter - Callback to return to character selection.
+	 */
 	constructor (onResume, onSettingsChange, onOpenSettings, onChangeCharacter) {
 		this.onResume = onResume;
 		this.onSettingsChange = onSettingsChange;
@@ -60,6 +66,9 @@ export class PauseScreen {
 		});
 	}
 
+	/**
+	 * Toggles the pause state of the game.
+	 */
 	toggle () {
 		if (this.isPaused) {
 			this.resume();
@@ -68,12 +77,18 @@ export class PauseScreen {
 		}
 	}
 
+	/**
+	 * Pauses the game and shows the pause screen.
+	 */
 	pause () {
 		if (this.isPaused) return;
 		this.isPaused = true;
 		this.pauseScreen?.classList.remove('hidden');
 	}
 
+	/**
+	 * Resumes the game and hides the pause screen.
+	 */
 	resume () {
 		if (!this.isPaused) return;
 		this.isPaused = false;

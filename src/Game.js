@@ -14,6 +14,10 @@ import { SettingsManager } from './managers/SettingsManager';
 import { SettingsUI } from './ui/SettingsUI';
 import { GameUI } from './ui/GameUI';
 
+/**
+ * Main game orchestrator class.
+ * Initializes the engine, manages game state, and coordinates between various systems.
+ */
 export class Game {
 	constructor () {
 		this.gameSettings = null;
@@ -26,6 +30,10 @@ export class Game {
 		this._showStartScreen();
 	}
 
+	/**
+	 * Initializes settings and shows the initial start screen.
+	 * @private
+	 */
 	_showStartScreen () {
 		this.settingsManager = new SettingsManager();
 		this.settingsUI = new SettingsUI(this.settingsManager, (settings) => this._applySettings(settings));
@@ -41,6 +49,11 @@ export class Game {
 		);
 	}
 
+	/**
+	 * Applies game settings to various systems (graphics, controls, audio).
+	 * @param {Object} settings - The settings object to apply.
+	 * @private
+	 */
 	_applySettings (settings) {
 		// Apply graphics settings
 		if (settings.graphics) {
@@ -83,6 +96,10 @@ export class Game {
 		}
 	}
 
+	/**
+	 * Initializes the Three.js engine and core managers.
+	 * Sets up scene, camera, renderer, lighting, and inputs.
+	 */
 	initEngine () {
 		// Create core Three.js components
 		this.scene = SceneBuilder.createScene();
@@ -113,6 +130,11 @@ export class Game {
 		this._animate();
 	}
 
+	/**
+	 * Starts the game with the selected character and applied settings.
+	 * Loads character models and initializes game UI.
+	 * @async
+	 */
 	async startGame () {
 		// Apply audio settings
 		if (this.gameSettings?.audio) {
@@ -157,6 +179,11 @@ export class Game {
 		await this._loadModels(CONFIG.characters[ this.currentCharacter ]);
 	}
 
+	/**
+	 * Resets the current game and returns to the character selection screen.
+	 * @private
+	 * @async
+	 */
 	async _changeCharacter () {
 		// Reset game state
 		this._resetGame();
@@ -165,18 +192,26 @@ export class Game {
 		this.startScreen.startScreen.classList.remove('hidden');
 	}
 
+	/**
+	 * Resets the game state, removing the character model and UI.
+	 * Properly disposes of Three.js resources to prevent memory leaks.
+	 * @private
+	 */
 	_resetGame () {
-		// Remove model from scene
+		// Remove model from scene and dispose resources
 		if (this.model) {
 			this.scene.remove(this.model);
-			// Traverse and dispose geometries/materials if needed? 
-			// For now just removing from scene is minimal
+			this._disposeObject(this.model);
 			this.model = null;
 		}
 
 		if (this.gameUI) {
 			this.gameUI.hide();
 			this.gameUI = null;
+		}
+
+		if (this.soundManager) {
+			this.soundManager.dispose();
 		}
 
 		// Clear controllers
@@ -191,6 +226,12 @@ export class Game {
 		this.isPaused = false;
 	}
 
+	/**
+	 * Loads character models and animations, and initializes controllers.
+	 * @param {Object} characterConfig - Configuration for the character to load.
+	 * @private
+	 * @async
+	 */
 	async _loadModels (characterConfig) {
 		const loadingScreen = document.getElementById('loading-screen');
 		const progressBar = document.getElementById('progress-bar');
@@ -281,6 +322,13 @@ export class Game {
 		}
 	}
 
+	/**
+	 * Registers an animation clip with the animation controller.
+	 * @param {string} name - Name of the animation.
+	 * @param {THREE.Group} fbxModel - The loaded FBX model containing the animation.
+	 * @param {Object} [options={}] - Animation options (e.g., loop).
+	 * @private
+	 */
 	_registerAnimation (name, fbxModel, options = {}) {
 		if (fbxModel.animations.length > 0) {
 			const clip = ModelLoader.prepareClip(fbxModel.animations[ 0 ], this.model);
@@ -288,6 +336,10 @@ export class Game {
 		}
 	}
 
+	/**
+	 * Handles the jump input event.
+	 * @private
+	 */
 	_handleJump () {
 		if (!this.charController) return;
 
@@ -296,18 +348,30 @@ export class Game {
 		}
 	}
 
+	/**
+	 * Resumes the game from a paused state.
+	 * @private
+	 */
 	_resumeGame () {
 		this.isPaused = false;
 		this.clock.start();
 		this.soundManager.resumeAll();
 	}
 
+	/**
+	 * Handles window resize events, updating camera and renderer dimensions.
+	 * @private
+	 */
 	_onWindowResize () {
 		this.camera.aspect = window.innerWidth / window.innerHeight;
 		this.camera.updateProjectionMatrix();
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
 	}
 
+	/**
+	 * Main animation loop. Updates all systems and renders the scene.
+	 * @private
+	 */
 	_animate () {
 		requestAnimationFrame(() => this._animate());
 
@@ -335,7 +399,49 @@ export class Game {
 		this._render();
 	}
 
+	/**
+	 * Renders the current scene.
+	 * @private
+	 */
 	_render () {
 		this.renderer.render(this.scene, this.camera);
+	}
+
+	/**
+	 * Recursively disposes of geometries and materials in an object and its children.
+	 * @param {THREE.Object3D} obj - The object to dispose.
+	 * @private
+	 */
+	_disposeObject (obj) {
+		obj.traverse(node => {
+			if (node.isMesh) {
+				if (node.geometry) node.geometry.dispose();
+				if (node.material) {
+					if (Array.isArray(node.material)) {
+						node.material.forEach(mat => {
+							this._disposeMaterial(mat);
+						});
+					} else {
+						this._disposeMaterial(node.material);
+					}
+				}
+			}
+		});
+	}
+
+	/**
+	 * Disposes of a material and its textures.
+	 * @param {THREE.Material} mat - The material to dispose.
+	 * @private
+	 */
+	_disposeMaterial (mat) {
+		mat.dispose();
+
+		// Dispose textures
+		for (const key of Object.keys(mat)) {
+			if (mat[ key ] && mat[ key ].isTexture) {
+				mat[ key ].dispose();
+			}
+		}
 	}
 }

@@ -1,7 +1,15 @@
 import * as THREE from 'three';
 import { CONFIG } from '../Config';
 
+/**
+ * Manages the camera behavior, including following the character and handling presets.
+ */
 export class CameraController {
+	/**
+	 * @param {THREE.Camera} camera - The camera to manage.
+	 * @param {OrbitControls} controls - The controls associated with the camera.
+	 * @param {THREE.Object3D} target - The character model to follow.
+	 */
 	constructor (camera, controls, target) {
 		this.camera = camera;
 		this.controls = controls;
@@ -10,6 +18,10 @@ export class CameraController {
 		this.currentPreset = 'medium';
 	}
 
+	/**
+	 * Sets the camera distance and height based on a predefined preset.
+	 * @param {string} presetName - Name of the preset ('close', 'medium', 'far').
+	 */
 	setPreset (presetName) {
 		const preset = CONFIG.camera.presets[ presetName ];
 		if (preset) {
@@ -19,6 +31,9 @@ export class CameraController {
 		}
 	}
 
+	/**
+	 * Initializes the camera position and target based on the character's location.
+	 */
 	initializePosition () {
 		const targetPos = this.target.position.clone();
 		const offset = CONFIG.camera.initialOffset;
@@ -40,6 +55,10 @@ export class CameraController {
 		this.initialized = true;
 	}
 
+	/**
+	 * Updates the camera position to smoothly follow the character.
+	 * Applies mouse sensitivity settings to the controls.
+	 */
 	update () {
 		if (!this.initialized || !this.target) return;
 

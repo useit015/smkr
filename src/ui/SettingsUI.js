@@ -1,7 +1,11 @@
 /**
- * SettingsUI - Manages the settings panel UI and interactions
+ * Manages the settings panel UI, allowing users to adjust graphics, controls, and audio.
  */
 export class SettingsUI {
+	/**
+	 * @param {SettingsManager} settingsManager - The manager handling settings data.
+	 * @param {Function} onSettingsChanged - Callback fired when settings are saved.
+	 */
 	constructor (settingsManager, onSettingsChanged) {
 		this.settingsManager = settingsManager;
 		this.onSettingsChanged = onSettingsChanged;
@@ -69,12 +73,18 @@ export class SettingsUI {
 		});
 	}
 
+	/**
+	 * Opens the settings panel and populates it with current values.
+	 */
 	open () {
 		console.log('SettingsUI: Opening settings panel');
 		this._loadSettingsToUI();
 		this.settingsPanel.classList.remove('hidden');
 	}
 
+	/**
+	 * Closes the settings panel.
+	 */
 	close () {
 		this.settingsPanel.classList.add('hidden');
 	}
@@ -125,6 +135,9 @@ export class SettingsUI {
 		});
 	}
 
+	/**
+	 * Saves the current UI values to the SettingsManager and closes the panel.
+	 */
 	save () {
 		this.settingsManager.set('controls', 'mouseSensitivity', parseInt(this.inputs.mouseSensitivity.value));
 		this.settingsManager.set('graphics', 'shadowQuality', this.inputs.shadowQuality.value);
@@ -143,6 +156,9 @@ export class SettingsUI {
 		}
 	}
 
+	/**
+	 * Resets all settings to their default values.
+	 */
 	reset () {
 		this.settingsManager.reset();
 		this._loadSettingsToUI();

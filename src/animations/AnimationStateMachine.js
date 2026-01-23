@@ -1,6 +1,15 @@
 import { CONFIG } from '../Config';
 
+/**
+ * Manages the state machine for character animations and synchronized sounds.
+ */
 export class AnimationStateMachine {
+	/**
+	 * @param {AnimationController} animController - The controller handling actual animation playback.
+	 * @param {CharacterController} charController - The controller for character physics.
+	 * @param {InputManager} inputManager - The input manager for movement state.
+	 * @param {SoundManager} soundManager - The sound manager for footstep and jump sounds.
+	 */
 	constructor (animController, charController, inputManager, soundManager) {
 		this.animations = animController;
 		this.character = charController;
@@ -8,6 +17,9 @@ export class AnimationStateMachine {
 		this.sounds = soundManager;
 	}
 
+	/**
+	 * Updates the animation state and sounds based on the character's movement.
+	 */
 	update () {
 		// Don't change animation while jumping
 		if (this.character.isJumping) {
@@ -33,12 +45,20 @@ export class AnimationStateMachine {
 		}
 	}
 
+	/**
+	 * Plays the appropriate jump animation based on whether the character is moving.
+	 */
 	playJumpAnimation () {
 		const animName = this.input.isMoving ? 'jump_move' : 'jump_static';
 		this.animations.play(animName, CONFIG.animation.jumpFadeDuration);
 		this.sounds.play('jump');
 	}
 
+	/**
+	 * Determines which animation should be playing based on input state.
+	 * @returns {string} The name of the animation ('idle', 'walk', 'run').
+	 * @private
+	 */
 	_determineAnimation () {
 		if (!this.input.isMoving) {
 			return 'idle';

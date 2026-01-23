@@ -1,4 +1,10 @@
+/**
+ * Manages the in-game HUD and camera controls.
+ */
 export class GameUI {
+	/**
+	 * @param {Game} game - The main game instance.
+	 */
 	constructor (game) {
 		this.game = game;
 		this.cameraContainer = document.getElementById('camera-controls');
@@ -34,12 +40,18 @@ export class GameUI {
 		});
 	}
 
+	/**
+	 * Shows the game UI elements.
+	 */
 	show () {
 		if (this.cameraContainer) {
 			this.cameraContainer.classList.remove('hidden');
 		}
 	}
 
+	/**
+	 * Hides the game UI elements.
+	 */
 	hide () {
 		if (this.cameraContainer) {
 			this.cameraContainer.classList.add('hidden');

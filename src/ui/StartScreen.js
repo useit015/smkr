@@ -1,9 +1,13 @@
 import { CONFIG } from '../Config';
 
 /**
- * StartScreen - Manages the start screen UI and settings panel
+ * Manages the start screen UI, including character selection and game initiation.
  */
 export class StartScreen {
+	/**
+	 * @param {Function} onStartGame - Callback fired when the game starts.
+	 * @param {Function} onOpenSettings - Callback to open the settings panel.
+	 */
 	constructor (onStartGame, onOpenSettings) {
 		this.onStartGame = onStartGame;
 		this.onOpenSettings = onOpenSettings;

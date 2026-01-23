@@ -1,5 +1,5 @@
 /**
- * SettingsManager - Handles loading, saving, and applying game settings
+ * Handles loading, saving, and applying game settings using localStorage.
  */
 export class SettingsManager {
 	constructor () {
@@ -24,7 +24,9 @@ export class SettingsManager {
 	}
 
 	/**
-	 * Load settings from localStorage or return defaults
+	 * Loads settings from localStorage or returns defaults if none exist.
+	 * Merges stored settings with defaults to ensure all keys are present.
+	 * @returns {Object} The loaded settings object.
 	 */
 	load () {
 		try {
@@ -41,7 +43,7 @@ export class SettingsManager {
 	}
 
 	/**
-	 * Save current settings to localStorage
+	 * Saves the current settings object to localStorage.
 	 */
 	save () {
 		try {
@@ -52,7 +54,7 @@ export class SettingsManager {
 	}
 
 	/**
-	 * Reset settings to defaults
+	 * Resets settings to their default values and saves them.
 	 */
 	reset () {
 		this.settings = JSON.parse(JSON.stringify(this.defaults));
@@ -60,14 +62,20 @@ export class SettingsManager {
 	}
 
 	/**
-	 * Get a specific setting value
+	 * Retrieves a specific setting value.
+	 * @param {string} category - The settings category (e.g., 'controls').
+	 * @param {string} key - The setting key (e.g., 'mouseSensitivity').
+	 * @returns {*} The setting value.
 	 */
 	get (category, key) {
 		return this.settings[ category ]?.[ key ];
 	}
 
 	/**
-	 * Set a specific setting value
+	 * Updates a specific setting value.
+	 * @param {string} category - The settings category.
+	 * @param {string} key - The setting key.
+	 * @param {*} value - The new value to set.
 	 */
 	set (category, key, value) {
 		if (this.settings[ category ]) {
@@ -76,14 +84,19 @@ export class SettingsManager {
 	}
 
 	/**
-	 * Get all settings
+	 * Retrieves all current settings.
+	 * @returns {Object} The complete settings object.
 	 */
 	getAll () {
 		return this.settings;
 	}
 
 	/**
-	 * Deep merge two objects
+	 * Deeply merges two objects, with the source overriding the target.
+	 * @param {Object} target - The base object.
+	 * @param {Object} source - The object to merge from.
+	 * @returns {Object} The merged result.
+	 * @private
 	 */
 	_deepMerge (target, source) {
 		const result = { ...target };
