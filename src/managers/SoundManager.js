@@ -1,6 +1,13 @@
 import * as THREE from 'three';
 
+/**
+ * Manages game audio, including spatial sound effects and background music.
+ * Utilizes both Three.js Audio and HTML5 Audio for flexibility.
+ */
 export class SoundManager {
+	/**
+	 * @param {THREE.Camera} camera - The camera to which the AudioListener will be attached.
+	 */
 	constructor (camera) {
 		this.listener = new THREE.AudioListener();
 		camera.add(this.listener);
@@ -16,6 +23,13 @@ export class SoundManager {
 		};
 	}
 
+	/**
+	 * Loads a sound effect or music track.
+	 * @param {string} name - Unique identifier for the sound.
+	 * @param {string} url - URL of the audio file.
+	 * @param {Object} [options={}] - Configuration options (loop, isMusic, volume).
+	 * @returns {Promise<THREE.Audio|HTMLAudioElement>} A promise that resolves to the loaded audio object.
+	 */
 	async loadSound (name, url, options = {}) {
 		console.log(`SoundManager: Loading ${ name } from ${ url }`, options);
 		const loop = options.loop !== undefined ? options.loop : false;
@@ -69,6 +83,10 @@ export class SoundManager {
 		});
 	}
 
+	/**
+	 * Plays a registered sound effect.
+	 * @param {string} name - The name of the sound to play.
+	 */
 	play (name) {
 		const sound = this.sounds[ name ];
 		if (!sound) return;
@@ -83,6 +101,10 @@ export class SoundManager {
 		}
 	}
 
+	/**
+	 * Plays a registered music track.
+	 * @param {string} name - The name of the music to play.
+	 */
 	playMusic (name) {
 		console.log(`SoundManager: PlayMusic '${ name }' requested`);
 		const audio = this.music[ name ];
@@ -100,6 +122,10 @@ export class SoundManager {
 		}
 	}
 
+	/**
+	 * Stops a specific sound effect or music track.
+	 * @param {string} name - The name of the audio to stop.
+	 */
 	stop (name) {
 		if (this.sounds[ name ] && this.sounds[ name ].isPlaying) {
 			this.sounds[ name ].stop();
@@ -110,6 +136,9 @@ export class SoundManager {
 		}
 	}
 
+	/**
+	 * Stops all currently playing sounds and music.
+	 */
 	stopAll () {
 		Object.values(this.sounds).forEach(sound => {
 			if (sound.isPlaying) sound.stop();
@@ -120,6 +149,9 @@ export class SoundManager {
 		});
 	}
 
+	/**
+	 * Pauses all currently playing sounds and music, marking them to be resumed later.
+	 */
 	pauseAll () {
 		Object.values(this.sounds).forEach(sound => {
 			if (sound.isPlaying) {
@@ -135,6 +167,9 @@ export class SoundManager {
 		});
 	}
 
+	/**
+	 * Resumes all audio tracks that were previously paused by pauseAll().
+	 */
 	resumeAll () {
 		Object.values(this.sounds).forEach(sound => {
 			if (sound._wasPlaying) {
@@ -151,8 +186,8 @@ export class SoundManager {
 	}
 
 	/**
-	 * Set master volume for the audio listener
-	 * @param {number} volume - Volume level between 0 and 1
+	 * Sets the master volume for the entire game.
+	 * @param {number} volume - Volume level between 0 and 1.
 	 */
 	setMasterVolume (volume) {
 		this.volumes.master = volume;
@@ -164,6 +199,10 @@ export class SoundManager {
 		});
 	}
 
+	/**
+	 * Sets the volume for all sound effects.
+	 * @param {number} volume - Volume level between 0 and 1.
+	 */
 	setSfxVolume (volume) {
 		this.volumes.sfx = volume;
 		Object.values(this.sounds).forEach(sound => {
@@ -171,6 +210,10 @@ export class SoundManager {
 		});
 	}
 
+	/**
+	 * Sets the volume for all music tracks.
+	 * @param {number} volume - Volume level between 0 and 1.
+	 */
 	setMusicVolume (volume) {
 		this.volumes.music = volume;
 		Object.values(this.music).forEach(audio => {
@@ -178,10 +221,24 @@ export class SoundManager {
 		});
 	}
 
+	/**
+	 * Updates the volume of an HTML5 Audio element based on music and master volume settings.
+	 * @param {HTMLAudioElement} audio - The audio element to update.
+	 * @private
+	 */
 	_updateMusicVolume (audio) {
 		if (audio && audio._baseVolume !== undefined) {
 			const finalVol = audio._baseVolume * this.volumes.music * this.volumes.master;
 			audio.volume = Math.max(0, Math.min(1, finalVol));
 		}
+	}
+
+	/**
+	 * Disposes of all audio resources and stops all playback.
+	 */
+	dispose () {
+		this.stopAll();
+		this.sounds = {};
+		this.music = {};
 	}
 }

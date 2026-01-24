@@ -2,7 +2,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { CONFIG } from '../Config';
 
+/**
+ * Utility class for building and configuring Three.js scene components.
+ */
 export class SceneBuilder {
+	/**
+	 * Creates and configures the main Three.js scene.
+	 * @returns {THREE.Scene} The configured scene.
+	 */
 	static createScene () {
 		const scene = new THREE.Scene();
 		scene.background = new THREE.Color(CONFIG.scene.backgroundColor);
@@ -14,6 +21,10 @@ export class SceneBuilder {
 		return scene;
 	}
 
+	/**
+	 * Creates and configures the perspective camera.
+	 * @returns {THREE.PerspectiveCamera} The configured camera.
+	 */
 	static createCamera () {
 		const camera = new THREE.PerspectiveCamera(
 			CONFIG.camera.fov,
@@ -25,6 +36,11 @@ export class SceneBuilder {
 		return camera;
 	}
 
+	/**
+	 * Creates and configures the WebGL renderer.
+	 * @param {HTMLCanvasElement} canvas - The canvas element to render to.
+	 * @returns {THREE.WebGLRenderer} The configured renderer.
+	 */
 	static createRenderer (canvas) {
 		const renderer = new THREE.WebGLRenderer({
 			canvas,
@@ -36,6 +52,12 @@ export class SceneBuilder {
 		return renderer;
 	}
 
+	/**
+	 * Creates and configures the OrbitControls for the camera.
+	 * @param {THREE.Camera} camera - The camera to control.
+	 * @param {HTMLElement} domElement - The DOM element to listen for events on.
+	 * @returns {OrbitControls} The configured controls.
+	 */
 	static createControls (camera, domElement) {
 		const controls = new OrbitControls(camera, domElement);
 		controls.enableDamping = true;
@@ -46,6 +68,11 @@ export class SceneBuilder {
 		return controls;
 	}
 
+	/**
+	 * Adds ambient and directional lighting to the scene.
+	 * Configures shadows for the directional light.
+	 * @param {THREE.Scene} scene - The scene to add lights to.
+	 */
 	static addLighting (scene) {
 		const { ambient, directional } = CONFIG.lighting;
 
@@ -71,6 +98,12 @@ export class SceneBuilder {
 		scene.add(dirLight);
 	}
 
+	/**
+	 * Updates the shadow quality settings for the renderer and directional light.
+	 * @param {THREE.WebGLRenderer} renderer - The renderer to update.
+	 * @param {THREE.Scene} scene - The scene containing the lights.
+	 * @param {string} quality - The quality level ('off', 'low', 'medium', 'high').
+	 */
 	static updateShadowQuality (renderer, scene, quality) {
 		const dirLight = scene.getObjectByName('directionalLight');
 
@@ -111,6 +144,10 @@ export class SceneBuilder {
 		}
 	}
 
+	/**
+	 * Adds a floor plane and a grid helper to the scene.
+	 * @param {THREE.Scene} scene - The scene to add the floor to.
+	 */
 	static addFloor (scene) {
 		const { size, color, gridDivisions, gridColor1, gridColor2 } = CONFIG.floor;
 
