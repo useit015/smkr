@@ -1,4 +1,4 @@
-# SMOKER - A 3D Adventure
+# LHAJ - A 3D Adventure
 
 A modular 3D third-person character controller and game engine built with **Three.js** and **Vite**.
 
