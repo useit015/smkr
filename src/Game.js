@@ -308,7 +308,7 @@ export class Game {
 		if (this.physics) this.physics.update(dt);
 		if (this.charController) {
 			this.charController.update(dt);
-			if (this.world) this.world.update(this.model.position);
+			if (this.world) this.world.update(this.model.position, this.clock.getElapsedTime());
 
 			// Update score based on distance traveled along Z
 			const currentScore = Math.max(0, Math.floor(Math.abs(this.model.position.z)));

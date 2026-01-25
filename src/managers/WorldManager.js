@@ -48,8 +48,9 @@ export class WorldManager {
 	/**
 	 * Updates the world by spawning new platforms and removing old ones.
 	 * @param {THREE.Vector3} playerPos - The current player position.
+	 * @param {number} time - Current game time.
 	 */
-	update (playerPos) {
+	update (playerPos, time = 0) {
 		if (!playerPos) return;
 
 		// 1. Spawn ahead
@@ -57,9 +58,13 @@ export class WorldManager {
 			this._spawn();
 		}
 
-		// 2. Cleanup behind
+		// 2. Update active platforms and Cleanup behind
 		for (let i = this.activePlatforms.length - 1; i >= 0; i--) {
 			const platform = this.activePlatforms[ i ];
+
+			// Update animations/shaders
+			if (time > 0) platform.update(time);
+
 			if (platform.mesh.position.z > playerPos.z + this.despawnDistance) {
 				this._removePlatform(i);
 			}
@@ -85,24 +90,28 @@ export class WorldManager {
 			this.lastPlatformY = -1;
 			this.lastPlatformZ = 0;
 		} else {
-			// 1. Determine next platform dimensions
-			const width = 6 + Math.random() * 6;
+			// Calculate difficulty factor (0.0 to 1.0) based on distance
+			const difficulty = Math.min(1.0, Math.abs(this.lastPlatformZ) / 5000);
+
+			// 1. Determine next platform dimensions - Get narrower as difficulty increases
+			const minWidth = Math.max(2, 6 - difficulty * 4);
+			const width = minWidth + Math.random() * (6 - difficulty * 2);
 			const height = 1 + Math.random() * 2;
 			const length = 10 + Math.random() * 15;
 
 			// 2. Determine Y Offset (Height change)
-			const yJump = (Math.random() - 0.4) * 5;
-			const nextY = Math.max(-10, Math.min(15, this.lastPlatformY + yJump));
+			const yJump = (Math.random() - 0.4) * (5 + difficulty * 5); // Increased verticality
+			const nextY = Math.max(-15, Math.min(20, this.lastPlatformY + yJump));
 			const actualYDiff = nextY - this.lastPlatformY;
 
-			// 3. Rule-based Gap calculation
-			let minGap = 6;
-			let maxGap = 11;
+			// 3. Rule-based Gap calculation - Gaps increase with difficulty
+			let minGap = 6 + difficulty * 4;
+			let maxGap = 11 + difficulty * 8;
 
 			if (actualYDiff > 2) {
-				maxGap = 8;
+				maxGap = minGap + 2;
 			} else if (actualYDiff < -3) {
-				maxGap = 16;
+				maxGap += 4;
 			}
 
 			const gap = minGap + Math.random() * (maxGap - minGap);
