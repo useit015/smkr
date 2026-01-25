@@ -1,4 +1,5 @@
 function createGetModelPath (id) {
+	// Prefer GLB for better performance and smaller bundle size (Assets currently FBX, preparing for GLB)
 	return (model) => `/models/${ id }/${ model }.fbx`;
 }
 

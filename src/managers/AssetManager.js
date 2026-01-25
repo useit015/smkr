@@ -25,13 +25,22 @@ export class AssetManager {
 		const config = CONFIG.characters[ characterId ];
 		if (!config) throw new Error(`Character ${ characterId } not found in CONFIG`);
 
+		// Helper to extract model and animations from either FBX or GLB result
+		const processResult = (result) => {
+			const model = result.scene || result;
+			const animations = result.animations || model.animations || [];
+			return { model, animations };
+		};
+
 		// Load main model
-		const model = await this.loader.load(config.models.idle);
+		const idleResult = await this.loader.load(config.models.idle);
+		const { model, animations: idleAnims } = processResult(idleResult);
+
 		model.scale.setScalar(CONFIG.character.scale);
 		ModelLoader.setupShadows(model);
 
 		// Load animations in parallel
-		const [ walkingFBX, runFBX, jumpStaticFBX, jumpMoveFBX, fallFBX, floatingFBX ] = await Promise.all([
+		const animResults = await Promise.all([
 			this.loader.load(config.models.walking),
 			this.loader.load(config.models.run),
 			this.loader.load(config.models.jumpStatic),
@@ -40,14 +49,16 @@ export class AssetManager {
 			this.loader.load(config.models.floating)
 		]);
 
+		const [ walking, run, jumpStatic, jumpMove, fall, floating ] = animResults.map(processResult);
+
 		const animations = {
-			idle: ModelLoader.prepareClip(model.animations[ 0 ], model),
-			walk: ModelLoader.prepareClip(walkingFBX.animations[ 0 ], model),
-			run: ModelLoader.prepareClip(runFBX.animations[ 0 ], model),
-			jump_static: ModelLoader.prepareClip(jumpStaticFBX.animations[ 0 ], model),
-			jump_move: ModelLoader.prepareClip(jumpMoveFBX.animations[ 0 ], model),
-			fall: ModelLoader.prepareClip(fallFBX.animations[ 0 ], model),
-			floating: ModelLoader.prepareClip(floatingFBX.animations[ 0 ], model)
+			idle: ModelLoader.prepareClip(idleAnims[ 0 ], model),
+			walk: ModelLoader.prepareClip(walking.animations[ 0 ], model),
+			run: ModelLoader.prepareClip(run.animations[ 0 ], model),
+			jump_static: ModelLoader.prepareClip(jumpStatic.animations[ 0 ], model),
+			jump_move: ModelLoader.prepareClip(jumpMove.animations[ 0 ], model),
+			fall: ModelLoader.prepareClip(fall.animations[ 0 ], model),
+			floating: ModelLoader.prepareClip(floating.animations[ 0 ], model)
 		};
 
 		return { model, animations };

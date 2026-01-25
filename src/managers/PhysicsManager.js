@@ -25,8 +25,10 @@ export class PhysicsManager {
 			this.defaultMaterial,
 			this.defaultMaterial,
 			{
-				friction: 0.1,
-				restitution: 0.0 // No bounce by default for parkour
+				friction: 0.5,
+				restitution: 0.0, // No bounce by default for parkour
+				contactEquationStiffness: 1e7,
+				contactEquationRelaxation: 3
 			}
 		);
 		this.world.addContactMaterial(contactMaterial);

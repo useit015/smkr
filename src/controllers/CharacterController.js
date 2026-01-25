@@ -33,21 +33,33 @@ export class CharacterController {
 	}
 
 	_initPhysicsBody () {
-		// Create a sphere for the character base (radius ~1 unit, scaled by CONFIG.character.scale)
-		// Assuming character scale 0.04 and actual height is roughly 2 units in Three space
-		const radius = 1.0;
-		const shape = new CANNON.Sphere(radius);
+		// Create a capsule-like collider using a cylinder and two spheres
+		// Total height: 2 units, Radius: 0.5 units
+		const radius = 0.5;
+		const cylinderHeight = 1.0;
+
 		this.body = new CANNON.Body({
 			mass: 1, // Dynamic
 			fixedRotation: true, // Don't let the character roll like a ball
 			material: this.physicsManager.defaultMaterial,
 			collisionFilterGroup: 2, // Character group
-			collisionFilterMask: 1 // Only collide with platforms (Group 1)
+			collisionFilterMask: 1, // Only collide with platforms (Group 1)
+			linearDamping: 0.1,
+			angularDamping: 0.1
 		});
-		this.body.addShape(shape);
 
-		// Initial position
-		this.body.position.set(0, radius, 0);
+		const sphereShape = new CANNON.Sphere(radius);
+		const cylinderShape = new CANNON.Cylinder(radius, radius, cylinderHeight, 12);
+
+		// Add cylinder (centered at 0,0,0 by default in Cannon)
+		this.body.addShape(cylinderShape);
+		// Add top sphere
+		this.body.addShape(sphereShape, new CANNON.Vec3(0, cylinderHeight / 2, 0));
+		// Add bottom sphere
+		this.body.addShape(sphereShape, new CANNON.Vec3(0, -cylinderHeight / 2, 0));
+
+		// Initial position: center of capsule at Y = cylinderHeight/2 + radius
+		this.body.position.set(0, (cylinderHeight / 2) + radius, 0);
 		this.physicsManager.addBody(this.body);
 
 		// Store reference back
@@ -207,7 +219,13 @@ export class CharacterController {
 
 	_getCurrentSpeed () {
 		if (!this.input.isMoving) return 0;
-		return this.input.isRunning ? CONFIG.character.runSpeed : CONFIG.character.walkSpeed;
+
+		// Calculate difficulty-based speed boost
+		const difficulty = Math.min(1.0, Math.abs(this.body.position.z) / 5000);
+		const speedBoost = 1.0 + difficulty * 0.5; // Up to 50% faster
+
+		const baseSpeed = this.input.isRunning ? CONFIG.character.runSpeed : CONFIG.character.walkSpeed;
+		return baseSpeed * speedBoost;
 	}
 }
 

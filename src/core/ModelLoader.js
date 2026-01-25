@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 /**
  * Helper class for loading and preparing 3D models.
  */
@@ -9,17 +9,28 @@ export class ModelLoader {
 	 * @param {THREE.LoadingManager} [manager=THREE.DefaultLoadingManager] - The loading manager to use.
 	 */
 	constructor (manager = THREE.DefaultLoadingManager) {
-		this.loader = new FBXLoader(manager);
+		this.fbxLoader = new FBXLoader(manager);
+		this.gltfLoader = new GLTFLoader(manager);
 	}
 
 	/**
-	 * Asynchronously loads an FBX model from the specified path.
-	 * @param {string} path - The URL of the FBX model.
+	 * Asynchronously loads a model (FBX or GLB/GLTF) from the specified path.
+	 * @param {string} path - The URL of the model.
 	 * @param {Function} [onProgress] - Callback function for loading progress.
-	 * @returns {Promise<THREE.Group>} A promise that resolves to the loaded model.
+	 * @returns {Promise<THREE.Group|Object>} A promise that resolves to the loaded model or GLTF object.
 	 */
 	async load (path, onProgress) {
-		return await this.loader.loadAsync(path, onProgress);
+		const extension = path.split('.').pop().toLowerCase();
+
+		if (extension === 'fbx') {
+			return await this.fbxLoader.loadAsync(path, onProgress);
+		} else if (extension === 'glb' || extension === 'gltf') {
+			const gltf = await this.gltfLoader.loadAsync(path, onProgress);
+			// We return the whole gltf object so we can access animations
+			return gltf;
+		} else {
+			throw new Error(`Unsupported model extension: ${extension}`);
+		}
 	}
 
 	/**
