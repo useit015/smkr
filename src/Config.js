@@ -14,6 +14,8 @@ function createCharacter (id) {
 			walking: getModelPath('walk'),
 			jumpMove: getModelPath('jump_move'),
 			jumpStatic: getModelPath('jump_static'),
+			fall: getModelPath('fall'),
+			floating: getModelPath('floating'),
 		}
 	};
 }
@@ -83,7 +85,7 @@ export const CONFIG = {
 	// Physics
 	physics: {
 		gravity: -30,
-		jumpForce: 12
+		jumpForce: 10
 	},
 
 	// Animation
@@ -94,7 +96,7 @@ export const CONFIG = {
 
 	// Model paths
 	characters: {
-		jamal: createCharacter('jamal'),
+		// jamal: createCharacter('jamal'),
 		said: createCharacter('said'),
 	},
 

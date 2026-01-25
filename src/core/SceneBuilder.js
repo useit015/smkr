@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { EffectComposer, RenderPass, BloomEffect, EffectPass, NoiseEffect, VignetteEffect } from 'postprocessing';
 import { CONFIG } from '../Config';
 
 /**
@@ -50,6 +51,41 @@ export class SceneBuilder {
 		renderer.setPixelRatio(window.devicePixelRatio);
 		renderer.shadowMap.enabled = true;
 		return renderer;
+	}
+
+	/**
+	 * Creates a post-processing composer for the renderer.
+	 * @param {THREE.WebGLRenderer} renderer 
+	 * @param {THREE.Scene} scene 
+	 * @param {THREE.Camera} camera 
+	 * @returns {EffectComposer}
+	 */
+	static createComposer (renderer, scene, camera) {
+		const composer = new EffectComposer(renderer);
+		composer.addPass(new RenderPass(scene, camera));
+
+		const bloom = new BloomEffect({
+			intensity: 1.5,
+			luminanceThreshold: 0.9,
+			luminanceSmoothing: 0.025,
+			height: 480
+		});
+
+		const vignette = new VignetteEffect({
+			eskil: false,
+			offset: 0.35,
+			darkness: 0.5
+		});
+
+		const noise = new NoiseEffect({
+			premultiply: true
+		});
+		noise.blendMode.opacity.value = 0.05;
+
+		const effectPass = new EffectPass(camera, bloom, vignette, noise);
+		composer.addPass(effectPass);
+
+		return composer;
 	}
 
 	/**

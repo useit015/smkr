@@ -12,6 +12,7 @@ export class AnimationController {
 		this.mixer = mixer;
 		this.actions = {};
 		this.activeAction = null;
+		this.currentActionName = null;
 	}
 
 	/**
@@ -53,6 +54,7 @@ export class AnimationController {
 
 		const oldAction = this.activeAction;
 		this.activeAction = newAction;
+		this.currentActionName = name;
 
 		if (oldAction) {
 			oldAction.fadeOut(fadeTime);

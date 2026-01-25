@@ -3,16 +3,21 @@
  */
 export class PauseScreen {
 	/**
-	 * @param {Function} onResume - Callback when the game is resumed.
+	 * @param {Function} onResume - Callback when the game is resumed via UI.
 	 * @param {Function} onSettingsChange - Callback when settings are changed.
 	 * @param {Function} onOpenSettings - Callback to open the settings panel.
 	 * @param {Function} onChangeCharacter - Callback to return to character selection.
+	 * @param {Object} options - Added options for better lifecycle control.
 	 */
-	constructor (onResume, onSettingsChange, onOpenSettings, onChangeCharacter) {
+	constructor (onResume, onSettingsChange, onOpenSettings, onChangeCharacter, options = {}) {
 		this.onResume = onResume;
 		this.onSettingsChange = onSettingsChange;
 		this.onOpenSettings = onOpenSettings;
 		this.onChangeCharacter = onChangeCharacter;
+
+		this.onPauseRequest = options.onPauseRequest; // Fired when ESC is pressed to pause
+		this.onUnpauseRequest = options.onUnpauseRequest; // Fired when ESC is pressed to unpause
+
 		this.isPaused = false;
 
 		// DOM Elements
@@ -39,7 +44,8 @@ export class PauseScreen {
 
 		// Change Character button
 		this.changeCharBtn?.addEventListener('click', () => {
-			this.resume(); // Unpause locally (hide screen)
+			this.isVisible = false;
+			this.pauseScreen?.classList.add('hidden');
 			if (this.onChangeCharacter) {
 				this.onChangeCharacter();
 			}
@@ -49,21 +55,11 @@ export class PauseScreen {
 		if (this.settingsBtn) {
 			this.settingsBtn.addEventListener('click', (e) => {
 				e.stopPropagation();
-				console.log('PauseScreen: Settings button clicked');
 				if (this.onOpenSettings) {
 					this.onOpenSettings();
-				} else {
-					console.error('PauseScreen: onOpenSettings callback is missing');
 				}
 			});
-		} else {
-			console.error('PauseScreen: Settings button element not found in DOM');
 		}
-
-		// Listen for close settings to ensure we don't double toggle
-		this.closeSettingsBtn?.addEventListener('click', () => {
-			// If we are paused, just ensuring focus or state is correct if needed
-		});
 	}
 
 	/**
@@ -84,6 +80,10 @@ export class PauseScreen {
 		if (this.isPaused) return;
 		this.isPaused = true;
 		this.pauseScreen?.classList.remove('hidden');
+
+		if (this.onPauseRequest) {
+			this.onPauseRequest();
+		}
 	}
 
 	/**
@@ -102,6 +102,10 @@ export class PauseScreen {
 
 		if (this.onResume) {
 			this.onResume();
+		}
+
+		if (this.onUnpauseRequest) {
+			this.onUnpauseRequest();
 		}
 	}
 }

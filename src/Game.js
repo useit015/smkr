@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 import { CONFIG } from './Config';
 import { SceneBuilder } from './core/SceneBuilder';
-import { ModelLoader } from './core/ModelLoader';
 import { InputManager } from './managers/InputManager';
 import { CharacterController } from './controllers/CharacterController';
 import { CameraController } from './controllers/CameraController';
 import { AnimationController } from './animations/AnimationController';
 import { AnimationStateMachine } from './animations/AnimationStateMachine';
 import { SoundManager } from './managers/SoundManager';
-import { StartScreen } from './ui/StartScreen';
-import { PauseScreen } from './ui/PauseScreen';
+import { PhysicsManager } from './managers/PhysicsManager';
 import { SettingsManager } from './managers/SettingsManager';
-import { SettingsUI } from './ui/SettingsUI';
-import { GameUI } from './ui/GameUI';
+import { AssetManager } from './managers/AssetManager';
+import { WorldManager } from './managers/WorldManager';
+import { UIManager } from './managers/UIManager';
+import { DebugUI } from './ui/DebugUI';
 
 /**
  * Main game orchestrator class.
@@ -20,293 +20,134 @@ import { GameUI } from './ui/GameUI';
  */
 export class Game {
 	constructor () {
-		this.gameSettings = null;
 		this.isPaused = false;
-		this.currentCharacter = 'jamal'; // Default
+		this.currentCharacter = 'said';
 
-		// Initialize core systems immediately
+		// Initialize core engine and managers
 		this.initEngine();
+		this.initManagers();
 
-		this._showStartScreen();
+		// Show the initial start screen
+		this.ui.showStart();
 	}
 
 	/**
-	 * Initializes settings and shows the initial start screen.
-	 * @private
+	 * Initializes specialized managers to offload logic from the Game class.
 	 */
-	_showStartScreen () {
+	initManagers () {
 		this.settingsManager = new SettingsManager();
-		this.settingsUI = new SettingsUI(this.settingsManager, (settings) => this._applySettings(settings));
+		this.world = new WorldManager(this.scene, this.physics);
 
-		this.startScreen = new StartScreen(
-			(characterId) => {
-				this.gameSettings = this.settingsManager.getAll();
-				this._applySettings(this.gameSettings);
-				this.currentCharacter = characterId;
+		// Asset loading with UI progress updates
+		this.assets = new AssetManager(
+			(url, loaded, total) => {
+				const progress = (loaded / total) * 100;
+				this.ui.updateLoading(progress, `Loading Assets: ${ Math.round(progress) }%`);
+			},
+			() => this.ui.hideLoading()
+		);
+
+		// Centralized UI management
+		this.ui = new UIManager(this, {
+			onStartGame: (charId) => {
+				this.currentCharacter = charId;
+				this._applySettings(this.settingsManager.getAll());
 				this.startGame();
 			},
-			() => this.settingsUI.open()
-		);
-	}
-
-	/**
-	 * Applies game settings to various systems (graphics, controls, audio).
-	 * @param {Object} settings - The settings object to apply.
-	 * @private
-	 */
-	_applySettings (settings) {
-		// Apply graphics settings
-		if (settings.graphics) {
-			// Render Distance
-			CONFIG.camera.far = settings.graphics.renderDistance;
-			CONFIG.scene.fogFar = settings.graphics.renderDistance;
-			if (this.camera) this.camera.far = settings.graphics.renderDistance;
-			if (this.scene && this.scene.fog) this.scene.fog.far = settings.graphics.renderDistance;
-			if (this.camera) this.camera.updateProjectionMatrix();
-
-			// Shadow Quality
-			if (this.renderer && this.scene) {
-				SceneBuilder.updateShadowQuality(this.renderer, this.scene, settings.graphics.shadowQuality);
+			onSettingsChange: (settings) => this._applySettings(settings),
+			onResume: () => this._resumeGame(),
+			onRestart: () => this._restartGame(),
+			onChangeCharacter: () => this._changeCharacter(),
+			onPauseRequest: () => {
+				this.isPaused = true;
+				this.clock.stop();
+				this.soundManager.pauseAll();
+			},
+			onUnpauseRequest: () => {
+				this.isPaused = false;
+				this.clock.start();
+				this.soundManager.resumeAll();
 			}
+		});
 
-			// Save to global config for other components to access
-			CONFIG.scene.shadowQuality = settings.graphics.shadowQuality;
-		}
-
-		// Apply controls settings
-		if (settings.controls) {
-			CONFIG.controls.mouseSensitivity = settings.controls.mouseSensitivity;
-		}
-
-		// Apply audio settings
-		if (settings.audio && this.soundManager) {
-			const master = settings.audio.masterVolume / 100;
-			const sfx = settings.audio.sfxVolume / 100;
-			const music = settings.audio.musicVolume / 100;
-
-			this.soundManager.setMasterVolume(master);
-			this.soundManager.setSfxVolume(sfx);
-			this.soundManager.setMusicVolume(music);
-		}
-
-		// Apply settings to pause screen if it exists
-		if (this.pauseScreen) {
-			// This will be handled by the update loop reading from settings manager,
-			// or we could explicitly update if needed.
-		}
+		// Initialize debug tools
+		this.debug = new DebugUI(this);
 	}
 
 	/**
-	 * Initializes the Three.js engine and core managers.
-	 * Sets up scene, camera, renderer, lighting, and inputs.
+	 * Initializes the Three.js engine and core systems.
 	 */
 	initEngine () {
-		// Create core Three.js components
 		this.scene = SceneBuilder.createScene();
 		this.camera = SceneBuilder.createCamera();
 		this.renderer = SceneBuilder.createRenderer(document.querySelector('#game-canvas'));
+		this.composer = SceneBuilder.createComposer(this.renderer, this.scene, this.camera);
 		this.controls = SceneBuilder.createControls(this.camera, this.renderer.domElement);
 		this.soundManager = new SoundManager(this.camera);
+		this.physics = new PhysicsManager();
 
-		// Setup scene lighting and floor
 		SceneBuilder.addLighting(this.scene);
-		SceneBuilder.addFloor(this.scene);
 
-		// Initialize managers
 		this.input = new InputManager();
-		this.clock = new THREE.Clock(); // Start clock but we won't use dt until game starts? 
-		// Actually clock should be running for engine but maybe we pause logic?
+		this.clock = new THREE.Clock();
 
-		// Setup jump callback
 		this.input.onJumpPressed = () => this._handleJump();
 
-		// Expose game instance for debugging
 		window.game = this;
-
-		// Setup event listeners
 		window.addEventListener('resize', () => this._onWindowResize());
+		window.addEventListener('keydown', (e) => {
+			if (e.key.toLowerCase() === 'h') {
+				if (this.debug) {
+					const isHidden = this.debug.gui._hidden;
+					this.debug.gui.show(!isHidden);
+				}
+			}
+		});
 
-		// Start loop (will render empty scene until game starts)
 		this._animate();
 	}
 
 	/**
-	 * Starts the game with the selected character and applied settings.
-	 * Loads character models and initializes game UI.
-	 * @async
+	 * Starts the game loop and loads character assets.
 	 */
 	async startGame () {
-		// Apply audio settings
-		if (this.gameSettings?.audio) {
-			const master = this.gameSettings.audio.masterVolume / 100;
-			const sfx = this.gameSettings.audio.sfxVolume / 100;
-			const music = this.gameSettings.audio.musicVolume / 100;
-
-			this.soundManager.setMasterVolume(master);
-			this.soundManager.setSfxVolume(sfx);
-			this.soundManager.setMusicVolume(music);
-		}
-
-		// Setup Pause Screen
-		this.pauseScreen = new PauseScreen(
-			() => this._resumeGame(),
-			(settings) => this._applySettings(settings),
-			() => this.settingsUI.open(),
-			() => this._changeCharacter()
-		);
-
-		// Hook into pause screen toggle to stop/start loop
-		const originalToggle = this.pauseScreen.toggle.bind(this.pauseScreen);
-		this.pauseScreen.toggle = () => {
-			originalToggle();
-			this.isPaused = this.pauseScreen.isPaused;
-			if (this.isPaused) {
-				this.clock.stop();
-				this.soundManager.pauseAll();
-			} else {
-				this.clock.start();
-				this.soundManager.resumeAll();
-			}
-		};
-
-		// Initialize Game UI
-		this.gameUI = new GameUI(this);
-		this.gameUI.show();
-
-		// Load models and setup controllers for selected character
-
-		// Load models and setup controllers for selected character
-		await this._loadModels(CONFIG.characters[ this.currentCharacter ]);
-	}
-
-	/**
-	 * Resets the current game and returns to the character selection screen.
-	 * @private
-	 * @async
-	 */
-	async _changeCharacter () {
-		// Reset game state
-		this._resetGame();
-
-		// Show start screen again
-		this.startScreen.startScreen.classList.remove('hidden');
-	}
-
-	/**
-	 * Resets the game state, removing the character model and UI.
-	 * Properly disposes of Three.js resources to prevent memory leaks.
-	 * @private
-	 */
-	_resetGame () {
-		// Remove model from scene and dispose resources
-		if (this.model) {
-			this.scene.remove(this.model);
-			this._disposeObject(this.model);
-			this.model = null;
-		}
-
-		if (this.gameUI) {
-			this.gameUI.hide();
-			this.gameUI = null;
-		}
-
-		if (this.soundManager) {
-			this.soundManager.dispose();
-		}
-
-		// Clear controllers
-
-		// Clear controllers
-		this.charController = null;
-		this.cameraController = null;
-		this.animStateMachine = null;
-		this.animController = null;
-
-		// Reset physics/state?
 		this.isPaused = false;
-	}
+		this.clock.start();
 
-	/**
-	 * Loads character models and animations, and initializes controllers.
-	 * @param {Object} characterConfig - Configuration for the character to load.
-	 * @private
-	 * @async
-	 */
-	async _loadModels (characterConfig) {
-		const loadingScreen = document.getElementById('loading-screen');
-		const progressBar = document.getElementById('progress-bar');
-		const loadingText = document.getElementById('loading-text');
+		// Prepare environment
+		this.world.generate();
+		this.ui.showHUD();
 
-		const manager = new THREE.LoadingManager();
-
-		manager.onProgress = (url, itemsLoaded, itemsTotal) => {
-			const progress = (itemsLoaded / itemsTotal) * 100;
-			if (progressBar) progressBar.style.width = `${ progress }%`;
-			if (loadingText) loadingText.innerText = `Loading: ${ Math.round(progress) }%`;
-		};
-
-		// Reset loading screen
-		if (loadingScreen) {
-			loadingScreen.style.display = 'flex';
-			loadingScreen.style.opacity = '1';
-			// Assuming there's a text element we reset
-			if (loadingText) loadingText.innerText = `Preparing ${ characterConfig.name }...`;
-		}
-
-		manager.onLoad = () => {
-			if (loadingScreen) {
-				loadingScreen.style.opacity = '0';
-				setTimeout(() => {
-					loadingScreen.style.display = 'none';
-				}, 500);
-			}
-		};
-
-		const loader = new ModelLoader(manager);
+		// Load character and animations
+		this.ui.showLoading(`Summoning ${ this.currentCharacter }...`);
 
 		try {
-			// Load main model
-			this.model = await loader.load(characterConfig.models.idle);
-			this.model.scale.setScalar(CONFIG.character.scale);
-			ModelLoader.setupShadows(this.model);
+			const { model, animations } = await this.assets.loadCharacter(this.currentCharacter);
+			this.model = model;
 			this.scene.add(this.model);
 
-			// Setup animation mixer and controller
+			// Setup animation system
 			const mixer = new THREE.AnimationMixer(this.model);
 			this.animController = new AnimationController(mixer);
-			window.mixer = mixer;
 
-			// Load all animation models
-			const [ walkingFBX, runFBX, jumpStaticFBX, jumpMoveFBX ] = await Promise.all([
-				loader.load(characterConfig.models.walking),
-				loader.load(characterConfig.models.run),
-				loader.load(characterConfig.models.jumpStatic),
-				loader.load(characterConfig.models.jumpMove)
-			]);
+			Object.entries(animations).forEach(([ name, clip ]) => {
+				const options = (name === 'jump_static' || name === 'jump_move') ? { loop: 'once' } : {};
+				this.animController.addAction(name, clip, options);
+			});
 
-			// Register animations
-			this._registerAnimation('idle', this.model);
-			this._registerAnimation('walk', walkingFBX);
-			this._registerAnimation('run', runFBX);
-			this._registerAnimation('jump_static', jumpStaticFBX, { loop: 'once' });
-			this._registerAnimation('jump_move', jumpMoveFBX, { loop: 'once' });
-
-			// Initialize controllers
-			this.charController = new CharacterController(this.model, this.input, this.camera);
+			// Initialize specialized controllers
+			this.charController = new CharacterController(this.model, this.input, this.camera, this.physics, () => this._handleGameOver());
+			this.charController.reset();
 			this.cameraController = new CameraController(this.camera, this.controls, this.model);
 			this.animStateMachine = new AnimationStateMachine(this.animController, this.charController, this.input, this.soundManager);
 
-			// Initialize camera and start idle animation
 			this.cameraController.initializePosition();
 			this.animController.play('idle');
 
-			// Force initial render
+			// Force render to avoid black frame
 			this._render();
 
-			console.log('Game initialized successfully');
-
-			// Load sounds
-			// Load sounds
+			// Load sounds and start music
 			await Promise.all([
 				this.soundManager.loadSound('walk', CONFIG.sounds.walk, { loop: true, volume: 0.5 }),
 				this.soundManager.loadSound('run', CONFIG.sounds.run, { loop: true, volume: 0.5 }),
@@ -314,113 +155,164 @@ export class Game {
 				this.soundManager.loadSound('background', CONFIG.sounds.background, { loop: true, isMusic: true, volume: 0.5 })
 			]);
 
-			// Start background music
 			this.soundManager.playMusic('background');
 
 		} catch (error) {
-			console.error('Error loading models:', error);
+			console.error('Failed to start game:', error);
+			this.ui.hideLoading();
 		}
 	}
 
 	/**
-	 * Registers an animation clip with the animation controller.
-	 * @param {string} name - Name of the animation.
-	 * @param {THREE.Group} fbxModel - The loaded FBX model containing the animation.
-	 * @param {Object} [options={}] - Animation options (e.g., loop).
-	 * @private
+	 * Returns to the character selection screen.
 	 */
-	_registerAnimation (name, fbxModel, options = {}) {
-		if (fbxModel.animations.length > 0) {
-			const clip = ModelLoader.prepareClip(fbxModel.animations[ 0 ], this.model);
-			this.animController.addAction(name, clip, options);
-		}
+	_changeCharacter () {
+		this._resetGame();
+		this.ui.showStart();
 	}
 
 	/**
-	 * Handles the jump input event.
-	 * @private
+	 * Cleans up all game-specific resources to prevent memory leaks.
 	 */
-	_handleJump () {
-		if (!this.charController) return;
-
-		if (this.charController.startJump()) {
-			this.animStateMachine.playJumpAnimation();
+	_resetGame () {
+		if (this.model) {
+			this.scene.remove(this.model);
+			this._disposeObject(this.model);
+			this.model = null;
 		}
+
+		this.ui.hideHUD();
+		this.world.cleanup();
+		this.soundManager.dispose();
+
+		this.charController = null;
+		this.cameraController = null;
+		this.animStateMachine = null;
+		this.animController = null;
+		this.isPaused = false;
 	}
 
-	/**
-	 * Resumes the game from a paused state.
-	 * @private
-	 */
 	_resumeGame () {
 		this.isPaused = false;
 		this.clock.start();
 		this.soundManager.resumeAll();
 	}
 
-	/**
-	 * Handles window resize events, updating camera and renderer dimensions.
-	 * @private
-	 */
+	_handleGameOver () {
+		this.isPaused = true;
+		this.clock.stop();
+		this.soundManager.pauseAll();
+		this.ui.showGameOver();
+	}
+
+	_restartGame () {
+		this.isPaused = true;
+		this.clock.stop();
+
+		this.world.generate();
+		if (this.charController) this.charController.reset();
+		if (this.cameraController) this.cameraController.initializePosition();
+		if (this.animController) this.animController.play('idle', 0);
+
+		this.isPaused = false;
+		this.clock.start();
+		this.soundManager.resumeAll();
+		this.soundManager.playMusic('background');
+	}
+
+	_handleJump () {
+		if (!this.charController || !this.charController.isGrounded) return;
+
+		// Play jump animation immediately
+		this.animStateMachine.playJumpAnimation();
+
+		const isMoving = this.input.isMoving;
+
+		// If standing still, the animation has a "wind-up" (bending knees).
+		// We delay the physical push-off for better synchronization.
+		const delay = isMoving ? 0 : 200; // 200ms delay for static jump
+
+		const performJump = () => {
+			// Check if we are still grounded and alive before applying force
+			if (this.charController && this.charController.isGrounded && !this.charController.isDead) {
+				this.charController.startJump();
+				this.soundManager.play('jump');
+			}
+		};
+
+		if (delay > 0) {
+			setTimeout(performJump, delay);
+		} else {
+			performJump();
+		}
+	}
+
+	_applySettings (settings) {
+		if (settings.graphics) {
+			CONFIG.camera.far = settings.graphics.renderDistance;
+			CONFIG.scene.fogFar = settings.graphics.renderDistance;
+			if (this.camera) {
+				this.camera.far = CONFIG.camera.far;
+				this.camera.updateProjectionMatrix();
+			}
+			if (this.scene && this.scene.fog) this.scene.fog.far = CONFIG.scene.fogFar;
+			if (this.renderer && this.scene) {
+				SceneBuilder.updateShadowQuality(this.renderer, this.scene, settings.graphics.shadowQuality);
+			}
+		}
+
+		if (settings.controls) {
+			CONFIG.controls.mouseSensitivity = settings.controls.mouseSensitivity;
+		}
+
+		if (settings.audio && this.soundManager) {
+			this.soundManager.setMasterVolume(settings.audio.masterVolume / 100);
+			this.soundManager.setSfxVolume(settings.audio.sfxVolume / 100);
+			this.soundManager.setMusicVolume(settings.audio.musicVolume / 100);
+		}
+	}
+
 	_onWindowResize () {
 		this.camera.aspect = window.innerWidth / window.innerHeight;
 		this.camera.updateProjectionMatrix();
 		this.renderer.setSize(window.innerWidth, window.innerHeight);
+		if (this.composer) this.composer.setSize(window.innerWidth, window.innerHeight);
 	}
 
-	/**
-	 * Main animation loop. Updates all systems and renders the scene.
-	 * @private
-	 */
 	_animate () {
 		requestAnimationFrame(() => this._animate());
-
 		if (this.isPaused) return;
 
 		const dt = this.clock.getDelta();
 
 		// Update all systems
+		if (this.physics) this.physics.update(dt);
 		if (this.charController) {
 			this.charController.update(dt);
+			if (this.world) this.world.update(this.model.position);
 		}
-
-		if (this.animStateMachine) {
-			this.animStateMachine.update();
-		}
-
-		if (this.animController) {
-			this.animController.update(dt);
-		}
-
-		if (this.cameraController) {
-			this.cameraController.update();
-		}
+		if (this.animStateMachine) this.animStateMachine.update();
+		if (this.animController) this.animController.update(dt);
+		if (this.cameraController) this.cameraController.update();
 
 		this._render();
 	}
 
-	/**
-	 * Renders the current scene.
-	 * @private
-	 */
 	_render () {
-		this.renderer.render(this.scene, this.camera);
+		if (this.composer) {
+			this.composer.render();
+		} else {
+			this.renderer.render(this.scene, this.camera);
+		}
 	}
 
-	/**
-	 * Recursively disposes of geometries and materials in an object and its children.
-	 * @param {THREE.Object3D} obj - The object to dispose.
-	 * @private
-	 */
 	_disposeObject (obj) {
 		obj.traverse(node => {
 			if (node.isMesh) {
 				if (node.geometry) node.geometry.dispose();
 				if (node.material) {
 					if (Array.isArray(node.material)) {
-						node.material.forEach(mat => {
-							this._disposeMaterial(mat);
-						});
+						node.material.forEach(mat => this._disposeMaterial(mat));
 					} else {
 						this._disposeMaterial(node.material);
 					}
@@ -429,15 +321,8 @@ export class Game {
 		});
 	}
 
-	/**
-	 * Disposes of a material and its textures.
-	 * @param {THREE.Material} mat - The material to dispose.
-	 * @private
-	 */
 	_disposeMaterial (mat) {
 		mat.dispose();
-
-		// Dispose textures
 		for (const key of Object.keys(mat)) {
 			if (mat[ key ] && mat[ key ].isTexture) {
 				mat[ key ].dispose();

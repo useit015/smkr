@@ -12,7 +12,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "cannon-es": "^0.20.0",
     "fbxloader": "^0.0.1-security",
+    "lil-gui": "^0.21.0",
+    "postprocessing": "^6.38.2",
     "three": "^0.182.0",
     "vite": "^7.3.1"
   }

@@ -10,10 +10,19 @@ export class InputManager {
 			ArrowDown: false,
 			ArrowLeft: false,
 			ArrowRight: false,
+			KeyW: false,
+			KeyS: false,
+			KeyA: false,
+			KeyD: false,
 			ShiftLeft: false,
 			ShiftRight: false,
 			Space: false
 		};
+
+		// Reusable vectors to avoid allocations in the update loop
+		this._forward = new THREE.Vector3();
+		this._right = new THREE.Vector3();
+		this._moveDir = new THREE.Vector3();
 
 		this._onKeyDown = this._onKeyDown.bind(this);
 		this._onKeyUp = this._onKeyUp.bind(this);
@@ -48,7 +57,9 @@ export class InputManager {
 	 */
 	get isMoving () {
 		return this.keys.ArrowUp || this.keys.ArrowDown ||
-			this.keys.ArrowLeft || this.keys.ArrowRight;
+			this.keys.ArrowLeft || this.keys.ArrowRight ||
+			this.keys.KeyW || this.keys.KeyS ||
+			this.keys.KeyA || this.keys.KeyD;
 	}
 
 	/**
@@ -67,22 +78,29 @@ export class InputManager {
 	getMovementDirection (camera) {
 		if (!this.isMoving) return null;
 
-		// Camera-relative movement vectors
-		const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-		forward.y = 0;
-		forward.normalize();
+		// Calculate forward vector from camera orientation
+		this._forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+		this._forward.y = 0;
+		this._forward.normalize();
 
-		const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
-		right.y = 0;
-		right.normalize();
+		// Calculate right vector from camera orientation
+		this._right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+		this._right.y = 0;
+		this._right.normalize();
 
-		const moveDir = new THREE.Vector3();
-		if (this.keys.ArrowUp) moveDir.add(forward);
-		if (this.keys.ArrowDown) moveDir.sub(forward);
-		if (this.keys.ArrowLeft) moveDir.sub(right);
-		if (this.keys.ArrowRight) moveDir.add(right);
+		// Reset and calculate direction
+		this._moveDir.set(0, 0, 0);
 
-		return moveDir.length() > 0 ? moveDir.normalize() : null;
+		if (this.keys.ArrowUp || this.keys.KeyW) this._moveDir.add(this._forward);
+		if (this.keys.ArrowDown || this.keys.KeyS) this._moveDir.sub(this._forward);
+		if (this.keys.ArrowLeft || this.keys.KeyA) this._moveDir.sub(this._right);
+		if (this.keys.ArrowRight || this.keys.KeyD) this._moveDir.add(this._right);
+
+		if (this._moveDir.lengthSq() > 0) {
+			return this._moveDir.normalize();
+		}
+
+		return null;
 	}
 
 	/**

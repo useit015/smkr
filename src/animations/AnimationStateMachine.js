@@ -21,9 +21,26 @@ export class AnimationStateMachine {
 	 * Updates the animation state and sounds based on the character's movement.
 	 */
 	update () {
-		// Don't change animation while jumping
-		if (this.character.isJumping) {
-			// Only stop footstep sounds, not jump sound
+		// Don't change animation while jumping or falling
+		if (!this.character.isGrounded) {
+			// 1. Intentional Jump Animations
+			if (this.character.isJumping) {
+				const jumpAnim = this.input.isMoving ? 'jump_move' : 'jump_static';
+				if (this.animations.currentActionName !== jumpAnim) {
+					this.animations.play(jumpAnim, CONFIG.animation.jumpFadeDuration);
+				}
+			}
+			// 2. Passive Falling / Airtime Animations
+			else {
+				// Terminal Fall (Falling into the void)
+				if (this.character.model.position.y < -5 && this.animations.currentActionName !== 'fall') {
+					this.animations.play('fall', CONFIG.animation.jumpFadeDuration);
+				}
+				// Default air pose is to keep the current action (e.g. running) 
+				// or eventually we could add a 'floating' animation here.
+			}
+
+			// Only stop footstep sounds
 			this.sounds.stop('walk');
 			this.sounds.stop('run');
 			return;
@@ -51,7 +68,6 @@ export class AnimationStateMachine {
 	playJumpAnimation () {
 		const animName = this.input.isMoving ? 'jump_move' : 'jump_static';
 		this.animations.play(animName, CONFIG.animation.jumpFadeDuration);
-		this.sounds.play('jump');
 	}
 
 	/**

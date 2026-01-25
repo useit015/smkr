@@ -11,7 +11,7 @@ export class StartScreen {
 	constructor (onStartGame, onOpenSettings) {
 		this.onStartGame = onStartGame;
 		this.onOpenSettings = onOpenSettings;
-		this.selectedCharacter = 'jamal'; // Default
+		this.selectedCharacter = 'said'; // Default
 
 		this.startScreen = document.getElementById('start-screen');
 		this.startBtn = document.getElementById('start-game-btn');

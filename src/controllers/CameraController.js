@@ -16,6 +16,13 @@ export class CameraController {
 		this.target = target;
 		this.initialized = false;
 		this.currentPreset = 'medium';
+
+		// Reusable vectors to avoid allocations in the update loop
+		this._currentOffset = new THREE.Vector3();
+		this._idealOffset = new THREE.Vector3();
+		this._targetPos = new THREE.Vector3();
+		this._characterHead = new THREE.Vector3();
+		this._tempVec = new THREE.Vector3();
 	}
 
 	/**
@@ -35,21 +42,21 @@ export class CameraController {
 	 * Initializes the camera position and target based on the character's location.
 	 */
 	initializePosition () {
-		const targetPos = this.target.position.clone();
+		const targetPos = this.target.position;
 		const offset = CONFIG.camera.initialOffset;
 		const headOffset = CONFIG.camera.targetOffset;
 
-		const characterHead = targetPos.clone().add(
-			new THREE.Vector3(headOffset.x, headOffset.y, headOffset.z)
+		this._characterHead.copy(targetPos).add(
+			this._tempVec.set(headOffset.x, headOffset.y, headOffset.z)
 		);
 
-		this.controls.target.copy(characterHead);
+		this.controls.target.copy(this._characterHead);
 		this.camera.position.set(
 			targetPos.x + offset.x,
 			targetPos.y + offset.y,
 			targetPos.z + offset.z
 		);
-		this.camera.lookAt(characterHead);
+		this.camera.lookAt(this._characterHead);
 		this.controls.update();
 
 		this.initialized = true;
@@ -65,29 +72,29 @@ export class CameraController {
 		const { chaseDistance, chaseHeight, smoothFactor, targetOffset } = CONFIG.camera;
 
 		// Get current offset from character to camera
-		const currentOffset = this.camera.position.clone().sub(this.target.position);
-		currentOffset.y = 0; // Flatten to get horizontal offset
+		this._currentOffset.copy(this.camera.position).sub(this.target.position);
+		this._currentOffset.y = 0; // Flatten to get horizontal offset
 
 		// Maintain current horizontal angle but adjust distance
-		const currentAngle = Math.atan2(currentOffset.x, currentOffset.z);
+		const currentAngle = Math.atan2(this._currentOffset.x, this._currentOffset.z);
 
 		// Create ideal position maintaining current angle
-		const idealOffset = new THREE.Vector3(
+		this._idealOffset.set(
 			Math.sin(currentAngle) * chaseDistance,
 			chaseHeight,
 			Math.cos(currentAngle) * chaseDistance
 		);
 
-		const targetPos = this.target.position.clone().add(idealOffset);
+		this._targetPos.copy(this.target.position).add(this._idealOffset);
 
 		// Smooth follow with position lerp
-		this.camera.position.lerp(targetPos, smoothFactor);
+		this.camera.position.lerp(this._targetPos, smoothFactor);
 
 		// Always keep the target on the character's head
-		const characterHead = this.target.position.clone().add(
-			new THREE.Vector3(targetOffset.x, targetOffset.y, targetOffset.z)
+		this._characterHead.copy(this.target.position).add(
+			this._tempVec.set(targetOffset.x, targetOffset.y, targetOffset.z)
 		);
-		this.controls.target.lerp(characterHead, smoothFactor);
+		this.controls.target.lerp(this._characterHead, smoothFactor);
 
 		// Apply sensitivity (default 5, range 1-10)
 		// OrbitControls rotateSpeed defaults to 1.0
