@@ -1,5 +1,7 @@
+import { events, EVENTS } from '../core/EventEmitter';
+
 /**
- * Manages the in-game HUD and camera controls.
+ * Manages the in-game HUD, score display, and camera controls.
  */
 export class GameUI {
 	/**
@@ -8,6 +10,9 @@ export class GameUI {
 	constructor (game) {
 		this.game = game;
 		this.cameraContainer = document.getElementById('camera-controls');
+		this.scoreContainer = document.getElementById('score-container');
+		this.scoreValue = document.getElementById('score-value');
+		this.highScoreValue = document.getElementById('high-score-value');
 		this.buttons = document.querySelectorAll('.camera-btn');
 
 		this._initListeners();
@@ -15,6 +20,16 @@ export class GameUI {
 	}
 
 	_initListeners () {
+		events.on(EVENTS.SCORE_UPDATE, (data) => {
+			if (this.scoreValue) this.scoreValue.innerText = data.score;
+			if (this.highScoreValue) this.highScoreValue.innerText = data.highScore;
+		});
+
+		events.on(EVENTS.GAME_START, () => {
+			if (this.scoreValue) this.scoreValue.innerText = '0';
+			if (this.highScoreValue) this.highScoreValue.innerText = this.game.highScore;
+		});
+
 		this.buttons.forEach(btn => {
 			btn.addEventListener('click', (e) => {
 				const preset = e.target.closest('.camera-btn').dataset.preset;
@@ -44,17 +59,15 @@ export class GameUI {
 	 * Shows the game UI elements.
 	 */
 	show () {
-		if (this.cameraContainer) {
-			this.cameraContainer.classList.remove('hidden');
-		}
+		if (this.cameraContainer) this.cameraContainer.classList.remove('hidden');
+		if (this.scoreContainer) this.scoreContainer.classList.remove('hidden');
 	}
 
 	/**
 	 * Hides the game UI elements.
 	 */
 	hide () {
-		if (this.cameraContainer) {
-			this.cameraContainer.classList.add('hidden');
-		}
+		if (this.cameraContainer) this.cameraContainer.classList.add('hidden');
+		if (this.scoreContainer) this.scoreContainer.classList.add('hidden');
 	}
 }

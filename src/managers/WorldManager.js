@@ -1,14 +1,19 @@
-import { setupAtmosphere, createPlatform } from '../core/WorldGenerator';
+import { setupAtmosphere } from '../core/WorldGenerator';
+import { Platform } from '../core/Platform';
+import { events, EVENTS } from '../core/EventEmitter';
 
 /**
  * Manages the procedural world generation with dynamic spawning and despawning.
+ * Utilizes object pooling for performance.
  */
 export class WorldManager {
-	constructor (scene, physics) {
+	constructor(scene, physics) {
 		this.scene = scene;
 		this.physics = physics;
 
 		this.activePlatforms = [];
+		this.pool = [];
+
 		this.lastPlatformZ = 0;
 		this.lastPlatformY = 0;
 		this.lastPlatformX = 0;
@@ -20,13 +25,14 @@ export class WorldManager {
 	/**
 	 * Initializes the first set of platforms.
 	 */
-	generate () {
+	generate() {
 		this.cleanup();
 		setupAtmosphere(this.scene);
 
 		// Initial spawning
 		this.lastPlatformZ = 0;
 		this.lastPlatformY = 0;
+		this.lastPlatformX = 0;
 
 		// Create starting platform
 		this._spawn(true);
@@ -35,6 +41,8 @@ export class WorldManager {
 		while (Math.abs(this.lastPlatformZ) < this.spawnDistance) {
 			this._spawn();
 		}
+
+		events.emit(EVENTS.GAME_START);
 	}
 
 	/**
@@ -62,7 +70,7 @@ export class WorldManager {
 	 * Spawns a new platform following the procedural rules.
 	 * @private
 	 */
-	_spawn (isFirst = false) {
+	_spawn(isFirst = false) {
 		let options = {};
 
 		if (isFirst) {
@@ -72,82 +80,84 @@ export class WorldManager {
 				length: 30,
 				posX: 0,
 				posY: -1,
-				posZ: 0
+				posZ: 0,
 			};
 			this.lastPlatformY = -1;
 			this.lastPlatformZ = 0;
 		} else {
-			// 1. Determine next platform length (variety)
+			// 1. Determine next platform dimensions
+			const width = 6 + Math.random() * 6;
+			const height = 1 + Math.random() * 2;
 			const length = 10 + Math.random() * 15;
 
 			// 2. Determine Y Offset (Height change)
-			// Higher chance for small changes, with limits
-			const yJump = (Math.random() - 0.4) * 5; // Favors slightly upward but with big drops
+			const yJump = (Math.random() - 0.4) * 5;
 			const nextY = Math.max(-10, Math.min(15, this.lastPlatformY + yJump));
 			const actualYDiff = nextY - this.lastPlatformY;
 
 			// 3. Rule-based Gap calculation
-			// If jumping UP (actualYDiff > 0), gap must be tighter.
-			// If jumping DOWN (actualYDiff < 0), gap can be wider.
-			// Physics context: runSpeed 18, jumpForce 12 -> max flat jump ~14 units.
 			let minGap = 6;
 			let maxGap = 11;
 
 			if (actualYDiff > 2) {
-				maxGap = 8; // Steep climb: very tight gap
+				maxGap = 8;
 			} else if (actualYDiff < -3) {
-				maxGap = 16; // Big drop: can fly further
+				maxGap = 16;
 			}
 
 			const gap = minGap + Math.random() * (maxGap - minGap);
 
 			// 4. Horizontal (X) limit
-			// Prevent platforms from zig-zagging too far to the sides (max 8 units from center)
 			const xShift = (Math.random() - 0.5) * 8;
 			const nextX = Math.max(-8, Math.min(8, this.lastPlatformX + xShift));
 
 			// Update tracking state
 			this.lastPlatformY = nextY;
 			this.lastPlatformX = nextX;
-			this.lastPlatformZ -= (length / 2 + gap);
+			this.lastPlatformZ -= length / 2 + gap;
 
 			options = {
+				width,
+				height,
 				length,
 				posX: this.lastPlatformX,
-				posY: this.lastPlatformY - 1, // Compensate for collider centering
-				posZ: this.lastPlatformZ
+				posY: this.lastPlatformY - 1,
+				posZ: this.lastPlatformZ,
 			};
 
 			// Move forward for the next gap calculation
-			this.lastPlatformZ -= (length / 2);
+			this.lastPlatformZ -= length / 2;
 		}
 
-		const platformData = createPlatform(this.scene, this.physics, options);
-		this.activePlatforms.push(platformData);
+		// Use pool if available
+		let platform;
+		if (this.pool.length > 0) {
+			platform = this.pool.pop();
+		} else {
+			platform = new Platform(this.scene, this.physics);
+		}
+
+		platform.spawn(options);
+		this.activePlatforms.push(platform);
+
+		events.emit(EVENTS.PLATFORM_SPAWN, platform);
 	}
 
-	_removePlatform (index) {
-		const platform = this.activePlatforms[ index ];
+	_removePlatform(index) {
+		const platform = this.activePlatforms[index];
+		platform.despawn();
 
-		// Physics Cleanup
-		if (platform.mesh.userData.physicsBody) {
-			this.physics.removeBody(platform.mesh.userData.physicsBody);
-		}
-
-		// Graphics Cleanup
-		this.scene.remove(platform.mesh);
-
-		// The Game instance is responsible for recursive material disposal 
-		// if we were truly destroying everything, but for a fast runner, 
-		// we should ideally POOL the meshes. For now, removing from scene is enough.
-
+		// Add back to pool
+		this.pool.push(platform);
 		this.activePlatforms.splice(index, 1);
+
+		events.emit(EVENTS.PLATFORM_DESPAWN, platform);
 	}
 
 	/**
 	 * Fully clears the world.
 	 */
-	cleanup () {
+	cleanup() {
 		while (this.activePlatforms.length > 0) {
 			this._removePlatform(0);
 		}

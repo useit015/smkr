@@ -10,6 +10,25 @@ const COLORS = [ 0x00FFFF, 0xFF00FF, 0x39FF14 ]; // Cyan, Magenta, Lime Green
 export function setupAtmosphere (scene) {
 	scene.background = new THREE.Color(0x000000);
 	scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+	// Add procedural starfield
+	if (scene.getObjectByName('starfield')) return;
+
+	const starGeometry = new THREE.BufferGeometry();
+	const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.5 });
+
+	const starVertices = [];
+	for (let i = 0; i < 5000; i++) {
+		const x = (Math.random() - 0.5) * 1000;
+		const y = (Math.random() - 0.5) * 1000;
+		const z = (Math.random() - 0.5) * 1000;
+		starVertices.push(x, y, z);
+	}
+
+	starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+	const stars = new THREE.Points(starGeometry, starMaterial);
+	stars.name = 'starfield';
+	scene.add(stars);
 }
 
 /**
