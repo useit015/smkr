@@ -53,6 +53,19 @@ export class SettingsManager {
 		}
 	}
 
+	getHighScore () {
+		return parseInt(localStorage.getItem('highScore') || '0', 10);
+	}
+
+	setHighScore (score) {
+		const current = this.getHighScore();
+		if (score > current) {
+			localStorage.setItem('highScore', score.toString());
+			return true;
+		}
+		return false;
+	}
+
 	/**
 	 * Resets settings to their default values and saves them.
 	 */

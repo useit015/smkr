@@ -143,6 +143,10 @@
 
     <!-- Game HUD -->
     <div id="game-ui">
+        <div id="score-container" class="score-container">
+            <div class="current-score">SCORE: <span id="score-value">0</span></div>
+            <div class="high-score">BEST: <span id="high-score-value">0</span></div>
+        </div>
         <div id="camera-controls" class="camera-controls">
             <button class="camera-btn" data-preset="close">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -204,6 +208,10 @@
     <div id="game-over-screen" class="hidden">
         <div class="game-over-content">
             <h2 class="game-over-title">GAME OVER</h2>
+            <div id="game-over-score" class="game-over-score">
+                <p>FINAL SCORE: <span id="final-score-value">0</span></p>
+                <p id="new-high-score-msg" class="new-high-score hidden">NEW BEST!</p>
+            </div>
             <div class="game-over-buttons">
                 <button id="restart-btn" class="btn btn-primary">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

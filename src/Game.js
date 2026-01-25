@@ -13,6 +13,8 @@ import { AssetManager } from './managers/AssetManager';
 import { WorldManager } from './managers/WorldManager';
 import { UIManager } from './managers/UIManager';
 import { DebugUI } from './ui/DebugUI';
+import { events, EVENTS } from './core/EventEmitter';
+import Stats from 'stats.js';
 
 /**
  * Main game orchestrator class.
@@ -22,6 +24,8 @@ export class Game {
 	constructor () {
 		this.isPaused = false;
 		this.currentCharacter = 'said';
+		this.score = 0;
+		this.highScore = 0;
 
 		// Initialize core engine and managers
 		this.initEngine();
@@ -36,6 +40,7 @@ export class Game {
 	 */
 	initManagers () {
 		this.settingsManager = new SettingsManager();
+		this.highScore = this.settingsManager.getHighScore();
 		this.world = new WorldManager(this.scene, this.physics);
 
 		// Asset loading with UI progress updates
@@ -78,6 +83,11 @@ export class Game {
 	 * Initializes the Three.js engine and core systems.
 	 */
 	initEngine () {
+		this.stats = new Stats();
+		this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+		document.body.appendChild(this.stats.dom);
+		this.stats.dom.style.display = 'none'; // Hidden by default
+
 		this.scene = SceneBuilder.createScene();
 		this.camera = SceneBuilder.createCamera();
 		this.renderer = SceneBuilder.createRenderer(document.querySelector('#game-canvas'));
@@ -196,18 +206,25 @@ export class Game {
 		this.isPaused = false;
 		this.clock.start();
 		this.soundManager.resumeAll();
+		events.emit(EVENTS.GAME_RESUME);
 	}
 
 	_handleGameOver () {
 		this.isPaused = true;
 		this.clock.stop();
 		this.soundManager.pauseAll();
+
+		const isNewHigh = this.settingsManager.setHighScore(this.score);
+		if (isNewHigh) this.highScore = this.score;
+
 		this.ui.showGameOver();
+		events.emit(EVENTS.GAME_OVER, { score: this.score, isNewHigh });
 	}
 
 	_restartGame () {
 		this.isPaused = true;
 		this.clock.stop();
+		this.score = 0;
 
 		this.world.generate();
 		if (this.charController) this.charController.reset();
@@ -283,6 +300,8 @@ export class Game {
 		requestAnimationFrame(() => this._animate());
 		if (this.isPaused) return;
 
+		if (this.stats) this.stats.begin();
+
 		const dt = this.clock.getDelta();
 
 		// Update all systems
@@ -290,12 +309,21 @@ export class Game {
 		if (this.charController) {
 			this.charController.update(dt);
 			if (this.world) this.world.update(this.model.position);
+
+			// Update score based on distance traveled along Z
+			const currentScore = Math.max(0, Math.floor(Math.abs(this.model.position.z)));
+			if (currentScore > this.score) {
+				this.score = currentScore;
+				events.emit(EVENTS.SCORE_UPDATE, { score: this.score, highScore: this.highScore });
+			}
 		}
 		if (this.animStateMachine) this.animStateMachine.update();
 		if (this.animController) this.animController.update(dt);
 		if (this.cameraController) this.cameraController.update();
 
 		this._render();
+
+		if (this.stats) this.stats.end();
 	}
 
 	_render () {

@@ -79,7 +79,12 @@ export const CONFIG = {
 		scale: 0.04,
 		walkSpeed: 8.0,
 		runSpeed: 18.0,
-		rotationSpeed: 10.0
+		rotationSpeed: 10.0,
+		grounding: {
+			footprintRadius: 0.5,
+			rayLength: 0.7,
+			startYOffset: -0.5
+		}
 	},
 
 	// Physics

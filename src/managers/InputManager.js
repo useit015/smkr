@@ -1,10 +1,17 @@
 import * as THREE from 'three';
+import { MobileControls } from '../ui/MobileControls';
 
 /**
- * Handles keyboard input for character movement and actions.
+ * Handles keyboard and mobile input for character movement and actions.
  */
 export class InputManager {
 	constructor () {
+		this.mobileInput = { forward: 0, right: 0, force: 0 };
+		this.mobileControls = new MobileControls(
+			(data) => { this.mobileInput = data; },
+			() => { if (this.onJumpPressed) this.onJumpPressed(); }
+		);
+
 		this.keys = {
 			ArrowUp: false,
 			ArrowDown: false,
@@ -52,22 +59,24 @@ export class InputManager {
 	}
 
 	/**
-	 * Checks if any movement keys are currently pressed.
+	 * Checks if any movement keys or mobile controls are currently active.
 	 * @type {boolean}
 	 */
 	get isMoving () {
-		return this.keys.ArrowUp || this.keys.ArrowDown ||
+		const hasKeyboardMove = this.keys.ArrowUp || this.keys.ArrowDown ||
 			this.keys.ArrowLeft || this.keys.ArrowRight ||
 			this.keys.KeyW || this.keys.KeyS ||
 			this.keys.KeyA || this.keys.KeyD;
+
+		return hasKeyboardMove || this.mobileInput.force > 0.1;
 	}
 
 	/**
-	 * Checks if any run (Shift) keys are currently pressed.
+	 * Checks if any run (Shift) keys are currently pressed or mobile force is high.
 	 * @type {boolean}
 	 */
 	get isRunning () {
-		return this.keys.ShiftLeft || this.keys.ShiftRight;
+		return this.keys.ShiftLeft || this.keys.ShiftRight || this.mobileInput.force > 0.8;
 	}
 
 	/**
@@ -91,10 +100,19 @@ export class InputManager {
 		// Reset and calculate direction
 		this._moveDir.set(0, 0, 0);
 
+		// Keyboard Input
 		if (this.keys.ArrowUp || this.keys.KeyW) this._moveDir.add(this._forward);
 		if (this.keys.ArrowDown || this.keys.KeyS) this._moveDir.sub(this._forward);
 		if (this.keys.ArrowLeft || this.keys.KeyA) this._moveDir.sub(this._right);
 		if (this.keys.ArrowRight || this.keys.KeyD) this._moveDir.add(this._right);
+
+		// Mobile Input
+		if (this.mobileInput.force > 0.1) {
+			this._tempVec = this._forward.clone().multiplyScalar(this.mobileInput.forward);
+			this._moveDir.add(this._tempVec);
+			this._tempVec = this._right.clone().multiplyScalar(this.mobileInput.right);
+			this._moveDir.add(this._tempVec);
+		}
 
 		if (this._moveDir.lengthSq() > 0) {
 			return this._moveDir.normalize();

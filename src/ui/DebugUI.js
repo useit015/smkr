@@ -85,8 +85,15 @@ export class DebugUI {
 
 		// Visual Helpers
 		const helpers = {
-			showPhysics: false
+			showPhysics: false,
+			showStats: false
 		};
+
+		folder.add(helpers, 'showStats').name('Show Performance Stats').onChange(v => {
+			if (this.game.stats) {
+				this.game.stats.dom.style.display = v ? 'block' : 'none';
+			}
+		});
 
 		// Future: track physics debugger state if you add it
 		folder.add(helpers, 'showPhysics').name('Show Physics Hub (TBD)');

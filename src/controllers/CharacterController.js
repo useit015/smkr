@@ -76,20 +76,33 @@ export class CharacterController {
 	 * @private
 	 */
 	_updateGroundState () {
-		// 1. Raycast check
-		// To avoid hitting ourselves, we start slightly below center
-		// Radius is 1.0. We start at 0.5 below center and check 0.6 down (total 1.1)
-		const start = new CANNON.Vec3(this.body.position.x, this.body.position.y - 0.5, this.body.position.z);
-		const end = new CANNON.Vec3(start.x, start.y - 0.6, start.z);
+		// 1. Multi-Raycast check for better reliability on edges
+		const { footprintRadius, rayLength, startYOffset } = CONFIG.character.grounding;
+		const startY = this.body.position.y + startYOffset;
 
+		const rayPoints = [
+			new CANNON.Vec3(this.body.position.x, startY, this.body.position.z),
+			new CANNON.Vec3(this.body.position.x + footprintRadius, startY, this.body.position.z),
+			new CANNON.Vec3(this.body.position.x - footprintRadius, startY, this.body.position.z),
+			new CANNON.Vec3(this.body.position.x, startY, this.body.position.z + footprintRadius),
+			new CANNON.Vec3(this.body.position.x, startY, this.body.position.z - footprintRadius),
+		];
+
+		let hasPhysicsGround = false;
 		const raycastResult = new CANNON.RaycastResult();
-		// Mask 1 ensures we only hit platforms (Group 1) and skip the character (Group 2)
-		this.physicsManager.world.raycastClosest(start, end, {
-			collisionFilterMask: 1,
-			skipBackfaces: true
-		}, raycastResult);
 
-		const hasPhysicsGround = raycastResult.hasHit;
+		for (const start of rayPoints) {
+			const end = new CANNON.Vec3(start.x, start.y - rayLength, start.z);
+			this.physicsManager.world.raycastClosest(start, end, {
+				collisionFilterMask: 1,
+				skipBackfaces: true
+			}, raycastResult);
+
+			if (raycastResult.hasHit) {
+				hasPhysicsGround = true;
+				break;
+			}
+		}
 
 		// 2. Velocity check (don't land if flying up fast)
 		const isMovingUp = this.body.velocity.y > 0.1;

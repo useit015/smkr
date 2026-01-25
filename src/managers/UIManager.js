@@ -2,6 +2,7 @@ import { StartScreen } from '../ui/StartScreen';
 import { PauseScreen } from '../ui/PauseScreen';
 import { SettingsUI } from '../ui/SettingsUI';
 import { GameUI } from '../ui/GameUI';
+import { events, EVENTS } from '../core/EventEmitter';
 
 /**
  * Orchestrates all UI screens and their transitions.
@@ -20,6 +21,8 @@ export class UIManager {
 		this.loadingText = document.getElementById('loading-text');
 		this.gameOverScreen = document.getElementById('game-over-screen');
 		this.restartBtn = document.getElementById('restart-btn');
+		this.finalScoreValue = document.getElementById('final-score-value');
+		this.newHighMsg = document.getElementById('new-high-score-msg');
 
 		// Concrete UI Components
 		this.settingsUI = new SettingsUI(game.settingsManager, callbacks.onSettingsChange);
@@ -48,6 +51,17 @@ export class UIManager {
 				if (this.callbacks.onRestart) this.callbacks.onRestart();
 			};
 		}
+
+		events.on(EVENTS.GAME_OVER, (data) => {
+			if (this.finalScoreValue) this.finalScoreValue.innerText = data.score;
+			if (this.newHighMsg) {
+				if (data.isNewHigh) {
+					this.newHighMsg.classList.remove('hidden');
+				} else {
+					this.newHighMsg.classList.add('hidden');
+				}
+			}
+		});
 	}
 
 	showStart () {
