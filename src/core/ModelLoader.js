@@ -29,7 +29,7 @@ export class ModelLoader {
 			// We return the whole gltf object so we can access animations
 			return gltf;
 		} else {
-			throw new Error(`Unsupported model extension: ${extension}`);
+			throw new Error(`Unsupported model extension: ${ extension }`);
 		}
 	}
 

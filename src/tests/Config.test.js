@@ -6,6 +6,7 @@ describe('Game Configuration', () => {
 		expect(CONFIG.character).toBeDefined();
 		expect(CONFIG.character.walkSpeed).toBeGreaterThan(0);
 		expect(CONFIG.character.runSpeed).toBeGreaterThan(CONFIG.character.walkSpeed);
+		expect(CONFIG.character.jumpMoveSpeed).toBeDefined();
 	});
 
 	it('should have physics configuration', () => {

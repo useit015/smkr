@@ -26,10 +26,12 @@ export class Game {
 		this.currentCharacter = 'said';
 		this.score = 0;
 		this.highScore = 0;
+		this._elapsedTime = 0;
 
 		// Initialize core engine and managers
 		this.initEngine();
 		this.initManagers();
+		this._initTestHooks();
 
 		// Show the initial start screen
 		this.ui.showStart();
@@ -123,6 +125,7 @@ export class Game {
 	async startGame () {
 		this.isPaused = false;
 		this.clock.start();
+		this._elapsedTime = 0;
 
 		// Prepare environment
 		this.world.generate();
@@ -200,6 +203,7 @@ export class Game {
 		this.animStateMachine = null;
 		this.animController = null;
 		this.isPaused = false;
+		this._elapsedTime = 0;
 	}
 
 	_resumeGame () {
@@ -225,6 +229,7 @@ export class Game {
 		this.isPaused = true;
 		this.clock.stop();
 		this.score = 0;
+		this._elapsedTime = 0;
 
 		this.world.generate();
 		if (this.charController) this.charController.reset();
@@ -303,12 +308,23 @@ export class Game {
 		if (this.stats) this.stats.begin();
 
 		const dt = this.clock.getDelta();
+		this._elapsedTime += dt;
+
+		this._step(dt);
+
+		this._render();
+
+		if (this.stats) this.stats.end();
+	}
+
+	_step (dt) {
+		if (this.isPaused) return;
 
 		// Update all systems
 		if (this.physics) this.physics.update(dt);
 		if (this.charController) {
 			this.charController.update(dt);
-			if (this.world) this.world.update(this.model.position, this.clock.getElapsedTime());
+			if (this.world && this.model) this.world.update(this.model.position, this._elapsedTime);
 
 			// Update score based on distance traveled along Z
 			const currentScore = Math.max(0, Math.floor(Math.abs(this.model.position.z)));
@@ -320,10 +336,6 @@ export class Game {
 		if (this.animStateMachine) this.animStateMachine.update();
 		if (this.animController) this.animController.update(dt);
 		if (this.cameraController) this.cameraController.update();
-
-		this._render();
-
-		if (this.stats) this.stats.end();
 	}
 
 	_render () {
@@ -356,5 +368,50 @@ export class Game {
 				mat[ key ].dispose();
 			}
 		}
+	}
+
+	_initTestHooks () {
+		window.advanceTime = (ms) => {
+			const step = 1 / 60;
+			const steps = Math.max(1, Math.round(ms / (1000 / 60)));
+			for (let i = 0; i < steps; i++) {
+				this._elapsedTime += step;
+				this._step(step);
+			}
+			this._render();
+		};
+
+		window.render_game_to_text = () => {
+			const mode = this.charController
+				? (this.charController.isDead ? 'gameover' : (this.isPaused ? 'paused' : 'playing'))
+				: 'menu';
+
+			const player = this.model ? {
+				x: Number(this.model.position.x.toFixed(2)),
+				y: Number(this.model.position.y.toFixed(2)),
+				z: Number(this.model.position.z.toFixed(2))
+			} : null;
+
+			const velocity = this.charController?.body ? {
+				x: Number(this.charController.body.velocity.x.toFixed(2)),
+				y: Number(this.charController.body.velocity.y.toFixed(2)),
+				z: Number(this.charController.body.velocity.z.toFixed(2))
+			} : null;
+
+			const worldSummary = this.world ? this.world.getStateSummary() : { platforms: [], obstacles: [] };
+
+			return JSON.stringify({
+				mode,
+				coordinateSystem: 'x:right, y:up, z:forward negative',
+				player,
+				velocity,
+				grounded: this.charController?.isGrounded ?? false,
+				score: this.score,
+				platformCount: worldSummary.platforms.length,
+				obstacleCount: worldSummary.obstacles.length,
+				platforms: worldSummary.platforms,
+				obstacles: worldSummary.obstacles
+			});
+		};
 	}
 }

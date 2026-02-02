@@ -111,8 +111,12 @@ export class CharacterController {
 			}, raycastResult);
 
 			if (raycastResult.hasHit) {
-				hasPhysicsGround = true;
-				break;
+				// Check if the surface is flat enough to stand on (y-component of normal > 0.5)
+				// This prevents sticking to the side of platforms
+				if (raycastResult.hitNormalWorld.y > 0.5) {
+					hasPhysicsGround = true;
+					break;
+				}
 			}
 		}
 
@@ -224,7 +228,13 @@ export class CharacterController {
 		const difficulty = Math.min(1.0, Math.abs(this.body.position.z) / 5000);
 		const speedBoost = 1.0 + difficulty * 0.5; // Up to 50% faster
 
-		const baseSpeed = this.input.isRunning ? CONFIG.character.runSpeed : CONFIG.character.walkSpeed;
+		let baseSpeed;
+		if (!this.isGrounded) {
+			baseSpeed = CONFIG.character.jumpMoveSpeed;
+		} else {
+			baseSpeed = this.input.isRunning ? CONFIG.character.runSpeed : CONFIG.character.walkSpeed;
+		}
+
 		return baseSpeed * speedBoost;
 	}
 }

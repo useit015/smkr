@@ -78,8 +78,9 @@ export const CONFIG = {
 	// Character
 	character: {
 		scale: 0.04,
-		walkSpeed: 8.0,
-		runSpeed: 18.0,
+		walkSpeed: 18.0,
+		runSpeed: 26.0,
+		jumpMoveSpeed: 18.0,
 		rotationSpeed: 10.0,
 		grounding: {
 			footprintRadius: 0.5,
